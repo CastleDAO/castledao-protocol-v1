@@ -31,33 +31,23 @@ contract Staker is ERC1155Holder, ERC721Holder {
     // Mapping to track the number of staked tokens per collection
     mapping(address => uint256) public collectionsStakedTokensCount;
 
-    /**
-     * Function to stake ERC721 tokens
-     *
-     * @param _collection The address of the collection the tokens belong to
-     * @param _tokenId The token id of the token to stake
-     */
-    function stakeERC721(address _collection, uint256 _tokenId) public {
-        ERC721 tokenContract = ERC721(_collection);
-        tokenContract.safeTransferFrom(msg.sender, address(this), _tokenId);
-
-        // Update the staked tokens mapping
-        stakedTokens[_collection][msg.sender][_tokenId] += 1;
-
-        // Update the staked tokens count mapping
-        collectionsStakedTokensCount[_collection] += 1;
-    }
+    // Mapping to track the lock time for staked tokens
+    mapping(address => mapping(address => mapping(uint256 => uint256)))
+        public lockTime;
 
     /**
      * Function to stake ERC1155 tokens
      *
      * @param _collection The address of the collection the tokens belong to
      * @param _tokenId The token id of the token to stake
+     * @param _amount The number of tokens to stake
+     * @param _lockTime The number of days the tokens should be locked
      */
     function stakeERC1155(
         address _collection,
         uint256 _tokenId,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _lockTime
     ) public {
         ERC1155 tokenContract = ERC1155(_collection);
         tokenContract.safeTransferFrom(
@@ -71,8 +61,22 @@ contract Staker is ERC1155Holder, ERC721Holder {
         // Update the staked tokens mapping
         stakedTokens[_collection][msg.sender][_tokenId] += _amount;
 
+        // Update the lock time mapping
+        lockTime[_collection][msg.sender][_tokenId] =
+            block.timestamp +
+            _lockTime *
+            1 days;
+
         // Update the staked tokens count mapping
         collectionsStakedTokensCount[_collection] += _amount;
+
+        emit Staked(
+            _collection,
+            msg.sender,
+            _tokenId,
+            _amount,
+            lockTime[_collection][msg.sender][_tokenId]
+        );
     }
 
     /**
@@ -80,8 +84,13 @@ contract Staker is ERC1155Holder, ERC721Holder {
      *
      * @param _collection The address of the collection the tokens belong to
      * @param _amount The number of tokens to stake
+     * @param _lockTime The number of days the tokens should be locked
      */
-    function stakeFungible(address _collection, uint256 _amount) public {
+    function stakeFungible(
+        address _collection,
+        uint256 _amount,
+        uint256 _lockTime
+    ) public {
         // Call the transfer function of the specified transfer contract
         ERC20 tokenContract = ERC20(_collection);
 
@@ -90,8 +99,58 @@ contract Staker is ERC1155Holder, ERC721Holder {
         // Update the staked tokens mapping
         stakedTokens[_collection][msg.sender][0] += _amount;
 
+        // Update the lock time mapping
+        lockTime[_collection][msg.sender][0] =
+            block.timestamp +
+            _lockTime *
+            1 days;
+
         // Update the staked tokens count mapping
         collectionsStakedTokensCount[_collection] += _amount;
+
+        emit Staked(
+            _collection,
+            msg.sender,
+            0,
+            _amount,
+            lockTime[_collection][msg.sender][0]
+        );
+    }
+
+    /**
+     * Function to stake ERC721 tokens
+     *
+     * @param _collection The address of the collection the tokens belong to
+     * @param _tokenId The token id of the token to stake
+     * @param _lockTime The number of days the tokens should be locked
+     */
+    function stakeERC721(
+        address _collection,
+        uint256 _tokenId,
+        uint256 _lockTime
+    ) public {
+        ERC721 tokenContract = ERC721(_collection);
+        tokenContract.safeTransferFrom(msg.sender, address(this), _tokenId);
+
+        // Update the staked tokens mapping
+        stakedTokens[_collection][msg.sender][_tokenId] += 1;
+
+        // Update the lock time mapping
+        lockTime[_collection][msg.sender][_tokenId] =
+            block.timestamp +
+            _lockTime *
+            1 days;
+
+        // Update the staked tokens count mapping
+        collectionsStakedTokensCount[_collection] += 1;
+
+        emit Staked(
+            _collection,
+            msg.sender,
+            _tokenId,
+            1,
+            lockTime[_collection][msg.sender][_tokenId]
+        );
     }
 
     /**
@@ -106,6 +165,11 @@ contract Staker is ERC1155Holder, ERC721Holder {
             "Not enough tokens staked"
         );
 
+        require(
+            block.timestamp >= lockTime[_collection][msg.sender][_tokenId],
+            "Lock time has not passed yet"
+        );
+
         ERC721 tokenContract = ERC721(_collection);
         tokenContract.safeTransferFrom(address(this), msg.sender, _tokenId);
 
@@ -114,6 +178,14 @@ contract Staker is ERC1155Holder, ERC721Holder {
 
         // Update the staked tokens count mapping
         collectionsStakedTokensCount[_collection] -= 1;
+
+        emit Unstaked(
+            _collection,
+            msg.sender,
+            _tokenId,
+            1,
+            lockTime[_collection][msg.sender][_tokenId]
+        );
     }
 
     /**
@@ -133,6 +205,11 @@ contract Staker is ERC1155Holder, ERC721Holder {
             "Not enough tokens staked"
         );
 
+        require(
+            block.timestamp >= lockTime[_collection][msg.sender][_tokenId],
+            "Lock time has not passed yet"
+        );
+
         ERC1155 tokenContract = ERC1155(_collection);
         tokenContract.safeTransferFrom(
             address(this),
@@ -147,6 +224,14 @@ contract Staker is ERC1155Holder, ERC721Holder {
 
         // Update the staked tokens count mapping
         collectionsStakedTokensCount[_collection] -= _amount;
+
+        emit Unstaked(
+            _collection,
+            msg.sender,
+            _tokenId,
+            _amount,
+            lockTime[_collection][msg.sender][_tokenId]
+        );
     }
 
     /**
@@ -161,6 +246,11 @@ contract Staker is ERC1155Holder, ERC721Holder {
             "Not enough tokens staked"
         );
 
+        require(
+            block.timestamp >= lockTime[_collection][msg.sender][0],
+            "Lock time has not passed yet"
+        );
+
         // Call the transfer function of the specified transfer contract
         ERC20 tokenContract = ERC20(_collection);
         tokenContract.transferFrom(address(this), msg.sender, _amount);
@@ -169,6 +259,14 @@ contract Staker is ERC1155Holder, ERC721Holder {
 
         // Update the staked tokens count mapping
         collectionsStakedTokensCount[_collection] -= _amount;
+
+        emit Unstaked(
+            _collection,
+            msg.sender,
+            0,
+            _amount,
+            lockTime[_collection][msg.sender][0]
+        );
     }
 
     /**
@@ -189,6 +287,23 @@ contract Staker is ERC1155Holder, ERC721Holder {
     }
 
     /**
+     * Function to check the lock time for a user and collection
+     *
+     * @param _collection The address of the collection to check
+     * @param _user The address of the user to check
+     * @param _tokenId The token id to check
+     *
+     * @return The lock time for the user and collection
+     */
+    function checkLockTime(
+        address _collection,
+        address _user,
+        uint256 _tokenId
+    ) public view returns (uint256) {
+        return lockTime[_collection][_user][_tokenId];
+    }
+
+    /**
      * Function to check the total number of staked tokens for a collection
      *
      * @param _collection The address of the collection to check the total number of staked tokens
@@ -201,4 +316,20 @@ contract Staker is ERC1155Holder, ERC721Holder {
     {
         return collectionsStakedTokensCount[_collection];
     }
+
+    event Unstaked(
+        address indexed _collection,
+        address indexed _owner,
+        uint256 _tokenId,
+        uint256 _amount,
+        uint256 _lockTime
+    );
+
+    event Staked(
+        address indexed _collection,
+        address indexed _owner,
+        uint256 _tokenId,
+        uint256 _amount,
+        uint256 _lockTime
+    );
 }
