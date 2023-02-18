@@ -21,8 +21,8 @@ contract Inventory is Staker, ManagerModifier {
     uint256 public maxSlots;
 
     struct UserInfo {
-        uint256 numSlots;
-        mapping(address => mapping(uint256 => uint256)) stakedNFTs;
+        uint256 slotsUsed;
+        uint256 capacity;
     }
 
     // Constructor function with the manager address
@@ -41,23 +41,36 @@ contract Inventory is Staker, ManagerModifier {
 
     function increaseSlots(address user, uint256 numSlots) public onlyManager {
         UserInfo storage userInfo = users[user];
-        userInfo.numSlots += numSlots;
+        userInfo.capacity += numSlots;
         emit SlotsIncreased(user, numSlots);
     }
 
-    function stakeNFT(address nftContract, uint256 tokenId) public {
+    function stakeNFT(address _collection, uint256 _tokenId, uint256 _amount) public {
         UserInfo storage userInfo = users[msg.sender];
-        require(userInfo.numSlots > 0, "User has no inventory slots");
+        require((userInfo.slotsUsed + _amount) <= userInfo.capacity, "User has no inventory slots");
 
-        IERC721(nftContract).transferFrom(msg.sender, address(this), tokenId);
-        userInfo.stakedNFTs += 1;
+        stakeERC1155(_collection, _tokenId, 1, _amount);
+
+        // Increase the count of slots used
+        userInfo.slotsUsed += _amount;
+
     }
 
-    function unstakeNFT(address nftContract, uint256 tokenId) public {
-        UserInfo storage userInfo = users[msg.sender];
-        require(userInfo.stakedNFTs > 0, "User has no staked NFTs");
+    // Stake NFTs to a user, only callable by the manager
+    function stakeNFTsForUser(address user, address _collection, uint256[] memory _tokenIds) public onlyManager {
+        UserInfo storage userInfo = users[user];
+        require((userInfo.slotsUsed + _tokenIds.length) <= userInfo.capacity, "User has no inventory slots");
 
-        IERC721(nftContract).transferFrom(address(this), msg.sender, tokenId);
-        userInfo.stakedNFTs -= 1;
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            _stakeERC1155ForUser( _collection, _tokenIds[i], 1, 0, user);
+        }
+    }
+
+    function unstakeNFT(address _collection, uint256 _tokenId, uint256 _amount) public {
+        UserInfo storage userInfo = users[msg.sender];
+        require(stakedTokens[msg.sender][_collection][_tokenId] > 0, "User has no staked NFTs");
+
+        unstakeERC1155(_collection, _tokenId, _amount);
+        userInfo.slotsUsed -= _amount;
     }
 }

@@ -132,10 +132,6 @@ contract CastleDAOStaking is Staker, ManagerModifier {
         
     }
 
-   
-    // Function to get the staked tokens for a user, returns an array of collection address and tokenId
-
-
     // Function to claim rewards for all the tokens staked by the user
     function claimRewards() external {
         // Get the user's staked tokens and for each, claim the rewards

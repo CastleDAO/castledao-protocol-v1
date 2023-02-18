@@ -49,6 +49,22 @@ contract Staker is ERC1155Holder, ERC721Holder {
         uint256 _amount,
         uint256 _lockTime
     ) public {
+        _stakeERC1155ForUser(
+            _collection,
+            _tokenId,
+            _amount,
+            _lockTime,
+            msg.sender
+        );
+    }
+
+    function _stakeERC1155ForUser(
+        address _collection,
+        uint256 _tokenId,
+        uint256 _amount,
+        uint256 _lockTime,
+        address _user
+    ) public {
         ERC1155 tokenContract = ERC1155(_collection);
         tokenContract.safeTransferFrom(
             msg.sender,
@@ -59,10 +75,10 @@ contract Staker is ERC1155Holder, ERC721Holder {
         );
 
         // Update the staked tokens mapping
-        stakedTokens[_collection][msg.sender][_tokenId] += _amount;
+        stakedTokens[_user][_collection][_tokenId] += _amount;
 
         // Update the lock time mapping
-        lockTime[_collection][msg.sender][_tokenId] =
+        lockTime[_user][_collection][_tokenId] =
             block.timestamp +
             _lockTime *
             1 days;
@@ -72,10 +88,10 @@ contract Staker is ERC1155Holder, ERC721Holder {
 
         emit Staked(
             _collection,
-            msg.sender,
+            _user,
             _tokenId,
             _amount,
-            lockTime[_collection][msg.sender][_tokenId]
+            lockTime[_user][_collection][_tokenId]
         );
     }
 
@@ -91,29 +107,35 @@ contract Staker is ERC1155Holder, ERC721Holder {
         uint256 _amount,
         uint256 _lockTime
     ) public {
+        _stakeFungibleForUser(_collection, _amount, _lockTime, msg.sender);
+    }
+
+    function _stakeFungibleForUser(
+        address _collection,
+        uint256 _amount,
+        uint256 _lockTime,
+        address _user
+    ) public {
         // Call the transfer function of the specified transfer contract
         ERC20 tokenContract = ERC20(_collection);
 
         tokenContract.transferFrom(msg.sender, address(this), _amount);
 
         // Update the staked tokens mapping
-        stakedTokens[_collection][msg.sender][0] += _amount;
+        stakedTokens[_user][_collection][0] += _amount;
 
         // Update the lock time mapping
-        lockTime[_collection][msg.sender][0] =
-            block.timestamp +
-            _lockTime *
-            1 days;
+        lockTime[_user][_collection][0] = block.timestamp + _lockTime * 1 days;
 
         // Update the staked tokens count mapping
         collectionsStakedTokensCount[_collection] += _amount;
 
         emit Staked(
             _collection,
-            msg.sender,
+            _user,
             0,
             _amount,
-            lockTime[_collection][msg.sender][0]
+            lockTime[_user][_collection][0]
         );
     }
 
@@ -129,14 +151,23 @@ contract Staker is ERC1155Holder, ERC721Holder {
         uint256 _tokenId,
         uint256 _lockTime
     ) public {
+        _stakeERC721ForUser(_collection, _tokenId, _lockTime, msg.sender);
+    }
+
+    function _stakeERC721ForUser(
+        address _collection,
+        uint256 _tokenId,
+        uint256 _lockTime,
+        address _user
+    ) public {
         ERC721 tokenContract = ERC721(_collection);
         tokenContract.safeTransferFrom(msg.sender, address(this), _tokenId);
 
         // Update the staked tokens mapping
-        stakedTokens[_collection][msg.sender][_tokenId] += 1;
+        stakedTokens[_user][_collection][_tokenId] += 1;
 
         // Update the lock time mapping
-        lockTime[_collection][msg.sender][_tokenId] =
+        lockTime[_user][_collection][_tokenId] =
             block.timestamp +
             _lockTime *
             1 days;
@@ -146,10 +177,10 @@ contract Staker is ERC1155Holder, ERC721Holder {
 
         emit Staked(
             _collection,
-            msg.sender,
+            _user,
             _tokenId,
             1,
-            lockTime[_collection][msg.sender][_tokenId]
+            lockTime[_user][_collection][_tokenId]
         );
     }
 
@@ -161,12 +192,12 @@ contract Staker is ERC1155Holder, ERC721Holder {
      */
     function unstakeERC721(address _collection, uint256 _tokenId) public {
         require(
-            stakedTokens[_collection][msg.sender][_tokenId] >= 1,
+            stakedTokens[msg.sender][_collection][_tokenId] >= 1,
             "Not enough tokens staked"
         );
 
         require(
-            block.timestamp >= lockTime[_collection][msg.sender][_tokenId],
+            block.timestamp >= lockTime[msg.sender][_collection][_tokenId],
             "Lock time has not passed yet"
         );
 
@@ -174,7 +205,7 @@ contract Staker is ERC1155Holder, ERC721Holder {
         tokenContract.safeTransferFrom(address(this), msg.sender, _tokenId);
 
         // Update the staked tokens mapping
-        stakedTokens[_collection][msg.sender][_tokenId] -= 1;
+        stakedTokens[msg.sender][_collection][_tokenId] -= 1;
 
         // Update the staked tokens count mapping
         collectionsStakedTokensCount[_collection] -= 1;
@@ -184,7 +215,7 @@ contract Staker is ERC1155Holder, ERC721Holder {
             msg.sender,
             _tokenId,
             1,
-            lockTime[_collection][msg.sender][_tokenId]
+            lockTime[msg.sender][_collection][_tokenId]
         );
     }
 
@@ -201,12 +232,12 @@ contract Staker is ERC1155Holder, ERC721Holder {
         uint256 _amount
     ) public {
         require(
-            stakedTokens[_collection][msg.sender][_tokenId] >= _amount,
+            stakedTokens[msg.sender][_collection][_tokenId] >= _amount,
             "Not enough tokens staked"
         );
 
         require(
-            block.timestamp >= lockTime[_collection][msg.sender][_tokenId],
+            block.timestamp >= lockTime[msg.sender][_collection][_tokenId],
             "Lock time has not passed yet"
         );
 
@@ -220,7 +251,7 @@ contract Staker is ERC1155Holder, ERC721Holder {
         );
 
         // Update the staked tokens mapping
-        stakedTokens[_collection][msg.sender][_tokenId] -= _amount;
+        stakedTokens[msg.sender][_collection][_tokenId] -= _amount;
 
         // Update the staked tokens count mapping
         collectionsStakedTokensCount[_collection] -= _amount;
@@ -242,12 +273,12 @@ contract Staker is ERC1155Holder, ERC721Holder {
      */
     function unstakeFungible(address _collection, uint256 _amount) public {
         require(
-            stakedTokens[_collection][msg.sender][0] >= _amount,
+            stakedTokens[msg.sender][_collection][0] >= _amount,
             "Not enough tokens staked"
         );
 
         require(
-            block.timestamp >= lockTime[_collection][msg.sender][0],
+            block.timestamp >= lockTime[msg.sender][_collection][0],
             "Lock time has not passed yet"
         );
 
@@ -255,7 +286,7 @@ contract Staker is ERC1155Holder, ERC721Holder {
         ERC20 tokenContract = ERC20(_collection);
         tokenContract.transferFrom(address(this), msg.sender, _amount);
         // Update the staked tokens mapping
-        stakedTokens[_collection][msg.sender][0] -= _amount;
+        stakedTokens[msg.sender][_collection][0] -= _amount;
 
         // Update the staked tokens count mapping
         collectionsStakedTokensCount[_collection] -= _amount;
@@ -265,7 +296,7 @@ contract Staker is ERC1155Holder, ERC721Holder {
             msg.sender,
             0,
             _amount,
-            lockTime[_collection][msg.sender][0]
+            lockTime[msg.sender][_collection][0]
         );
     }
 
@@ -283,7 +314,7 @@ contract Staker is ERC1155Holder, ERC721Holder {
         address _user,
         uint256 _tokenId
     ) public view returns (uint256) {
-        return stakedTokens[_collection][_user][_tokenId];
+        return stakedTokens[_user][_collection][_tokenId];
     }
 
     /**
@@ -300,7 +331,7 @@ contract Staker is ERC1155Holder, ERC721Holder {
         address _user,
         uint256 _tokenId
     ) public view returns (uint256) {
-        return lockTime[_collection][_user][_tokenId];
+        return lockTime[_user][_collection][_tokenId];
     }
 
     /**
