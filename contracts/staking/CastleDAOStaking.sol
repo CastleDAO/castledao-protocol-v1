@@ -2,13 +2,13 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "./Staker.sol";
+import "./BaseStaker.sol";
 import "../interfaces/ITokenManager.sol";
 import "../ManagerModifier.sol";
 import "../interfaces/IRuby.sol";
 import "hardhat/console.sol";
 
-contract CastleDAOStaking is Staker, ManagerModifier {
+contract CastleDAOStaking is  ManagerModifier, BaseStaker {
     // Address of the Ruby contract
     IRuby public ruby;
 
@@ -103,8 +103,7 @@ contract CastleDAOStaking is Staker, ManagerModifier {
         // Check that the lock time is allowed
         require(lockTimesAvailable[_lockDays], "Lock time not allowed");
 
-        stakeERC721(_collection, _tokenId, _lockDays);
-
+        _stakeERC721ForUser(_collection, _tokenId, _lockDays, msg.sender);
         // Set last reward time
         tokenIdToLastRewardTime[_collection][_tokenId] = block.timestamp;
 
@@ -119,7 +118,7 @@ contract CastleDAOStaking is Staker, ManagerModifier {
         // Claim rewards for this token
         _claimRewards(_collection, _tokenId);
         
-        unstakeERC721(_collection, _tokenId);
+        _unstakeERC721(_collection, _tokenId);
 
         // Remove the token from the user's staked tokens
         uint256[] storage userTokens = userToTokensStaked[msg.sender][_collection];

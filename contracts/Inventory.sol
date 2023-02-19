@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "./ManagerModifier.sol";
-import "./staking/Staker.sol";
+import "./staking/BaseStaker.sol";
 
 /**
  * @title Inventory
@@ -15,7 +15,7 @@ import "./staking/Staker.sol";
  * Is upgradeable.
  */
 
-contract Inventory is Staker, ManagerModifier {
+contract Inventory is BaseStaker, ManagerModifier {
     
     // Max slots per user
     uint256 public maxSlots;
@@ -49,7 +49,7 @@ contract Inventory is Staker, ManagerModifier {
         UserInfo storage userInfo = users[msg.sender];
         require((userInfo.slotsUsed + _amount) <= userInfo.capacity, "User has no inventory slots");
 
-        stakeERC1155(_collection, _tokenId, 1, _amount);
+        _stakeERC1155ForUser(_collection, _tokenId, 1, _amount, msg.sender);
 
         // Increase the count of slots used
         userInfo.slotsUsed += _amount;
@@ -70,7 +70,7 @@ contract Inventory is Staker, ManagerModifier {
         UserInfo storage userInfo = users[msg.sender];
         require(stakedTokens[msg.sender][_collection][_tokenId] > 0, "User has no staked NFTs");
 
-        unstakeERC1155(_collection, _tokenId, _amount);
+        _unstakeERC1155(_collection, _tokenId, _amount);
         userInfo.slotsUsed -= _amount;
     }
 }
