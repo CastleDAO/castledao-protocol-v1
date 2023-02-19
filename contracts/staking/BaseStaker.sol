@@ -16,11 +16,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
  *
  * The contract provides methods for staking, unstaking, and checking the number of staked tokens for each
  * collection and user.
- *
- * The transfer contract addresses are specified as parameters in the stake and unstake methods and are used
- * to call the transfer functions for the corresponding collections.
- *
- * Note: The transfer contract address must be an address that implements the Transfer interface.
+ * 
  */
 
 contract BaseStaker is ERC1155Holder, ERC721Holder {

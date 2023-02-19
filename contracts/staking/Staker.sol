@@ -10,20 +10,9 @@ import "./BaseStaker.sol";
 
 /**
  * Staking contract
- *
- * This contract allows users to stake their ERC721 and ERC1155 tokens by specifying the address of the
- * Transfer contract for each collection and the number of tokens to stake. The staked tokens are tracked
- * for each user and collection.
- *
- * The contract provides methods for staking, unstaking, and checking the number of staked tokens for each
- * collection and user.
- *
- * The transfer contract addresses are specified as parameters in the stake and unstake methods and are used
- * to call the transfer functions for the corresponding collections.
- *
- * Note: The transfer contract address must be an address that implements the Transfer interface.
+ * This is a generic implementation of the BaseStaker contract with public functions
+ * It allow users to stake ERC1155, ERC721 tokens and ERC20 tokens 
  */
-
 contract Staker is BaseStaker {
     /**
      * Function to stake ERC1155 tokens
