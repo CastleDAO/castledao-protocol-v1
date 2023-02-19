@@ -6,6 +6,7 @@ import "./Staker.sol";
 import "../interfaces/ITokenManager.sol";
 import "../ManagerModifier.sol";
 import "../interfaces/IRuby.sol";
+import "hardhat/console.sol";
 
 contract CastleDAOStaking is Staker, ManagerModifier {
     // Address of the Ruby contract
@@ -96,13 +97,13 @@ contract CastleDAOStaking is Staker, ManagerModifier {
     }
 
     // Function to stake a token, only allowed collections
-    function stakeCastleDAONFT(address _collection, uint256 _tokenId, uint256 _lockTime) external {
+    function stakeCastleDAONFT(address _collection, uint256 _tokenId, uint256 _lockDays) external {
         require(allowedCollections[_collection], "Collection not allowed");
 
         // Check that the lock time is allowed
-        require(lockTimesAvailable[_lockTime], "Lock time not allowed");
+        require(lockTimesAvailable[_lockDays], "Lock time not allowed");
 
-        stakeERC721(_collection, _tokenId, _lockTime);
+        stakeERC721(_collection, _tokenId, _lockDays);
 
         // Set last reward time
         tokenIdToLastRewardTime[_collection][_tokenId] = block.timestamp;
@@ -149,13 +150,13 @@ contract CastleDAOStaking is Staker, ManagerModifier {
     function _claimRewards(address _collection, uint256 _tokenId) private{
         // Require that the token is staked and owned by the user
         require(
-            stakedTokens[_collection][msg.sender][_tokenId] >= 1,
+            stakedTokens[msg.sender][_collection][_tokenId] >= 1,
             "Not enough tokens staked"
         );
 
         uint256 lastRewardTime = tokenIdToLastRewardTime[_collection][_tokenId];
         uint256 rewardDays = (block.timestamp - lastRewardTime) / 1 days;
-        uint256 rewardAmount = getRewardAmount(_collection, _tokenId);
+        uint256 rewardAmount = getRewardAmount(msg.sender, _collection, _tokenId);
 
         require(rewardAmount > 0, "Not enough to claim");
 
@@ -167,11 +168,15 @@ contract CastleDAOStaking is Staker, ManagerModifier {
         emit RewardClaimed(msg.sender, _collection,  _tokenId, rewardAmount);
     }
 
-    function getRewardAmount(address _collection, uint256 _tokenId) public view returns(uint256){
+    function getRewardAmount(address _user, address _collection, uint256 _tokenId) public view returns(uint256){
         uint256 lastRewardTime = tokenIdToLastRewardTime[_collection][_tokenId];
         uint256 rewardAmount = 0;
         uint256 rewardDays = (block.timestamp - lastRewardTime) / 1 days;
-        uint256 lockDuration = lockTime[_collection][msg.sender][_tokenId];
+        uint256 lockDuration = lockTime[_user][_collection][_tokenId].lockDaysDuration;
+        console.log("lockDuration %s", lockDuration);
+        console.log("rewardDays %s", rewardDays);
+        console.log("collectionRewardsPerDay[_collection]  %s", collectionRewardsPerDay[_collection]);
+        console.log("daysLockedToReward[lockDuration]  %s", daysLockedToReward[lockDuration]);
 
         rewardAmount = (daysLockedToReward[lockDuration] + collectionRewardsPerDay[_collection]) * rewardDays;
 
