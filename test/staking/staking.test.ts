@@ -3,6 +3,8 @@ import { Contract } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+
 
 describe("Staker Contract", () => {
   // Contracts used in the tests
@@ -68,7 +70,7 @@ describe("Staker Contract", () => {
       // Stake magic
       await staker
         .connect(userERC20)
-        .stakeFungible(magicContract.address, amount);
+        .stakeFungible(magicContract.address, amount, 0);
 
       // The balance of the user should be 0
       expect(await magicContract.balanceOf(userERC20.address)).to.equal(0);
@@ -87,7 +89,7 @@ describe("Staker Contract", () => {
       await nftERC721.connect(userNFT).approve(staker.address, 1);
 
       // Stake NFT
-      await staker.connect(userNFT).stakeERC721(nftERC721.address, 1);
+      await staker.connect(userNFT).stakeERC721(nftERC721.address, 1, 0);
 
       // The owner of the NFT should be the staker
       expect(await nftERC721.ownerOf(1)).to.equal(staker.address);
@@ -104,7 +106,7 @@ describe("Staker Contract", () => {
 
       // Try to stake NFT
       await expect(
-        staker.connect(userNFT).stakeERC721(nftERC721.address, 3)
+        staker.connect(userNFT).stakeERC721(nftERC721.address, 3, 0)
       ).to.be.revertedWith("ERC721: invalid token ID");
     });
 
@@ -117,7 +119,7 @@ describe("Staker Contract", () => {
 
       // Try to stake NFT
       await expect(
-        staker.connect(userNFT).stakeERC721(nftERC721.address, 2)
+        staker.connect(userNFT).stakeERC721(nftERC721.address, 2, 0)
       ).to.be.revertedWith("ERC721: transfer from incorrect owner");
     });
 
@@ -129,7 +131,7 @@ describe("Staker Contract", () => {
       expect(await nftERC1155.balanceOf(userNFT.address, 1)).to.equal(3);
 
       // Stake NFT
-      await staker.connect(userNFT).stakeERC1155(nftERC1155.address, 1, 3);
+      await staker.connect(userNFT).stakeERC1155(nftERC1155.address, 1, 3, 0);
 
       // The owner of the NFT should be the staker
       expect(await nftERC1155.balanceOf(staker.address, 1)).to.equal(3);
@@ -145,7 +147,7 @@ describe("Staker Contract", () => {
       await nftERC1155.connect(userNFT).setApprovalForAll(staker.address, true);
 
       // Stake NFT
-      await staker.connect(userNFT).stakeERC1155(nftERC1155.address, 1, 3);
+      await staker.connect(userNFT).stakeERC1155(nftERC1155.address, 1, 3, 0);
 
       // The staker contract should count 3 NFT staked on the collection nftERC1155.address
       expect(
@@ -173,14 +175,14 @@ describe("Staker Contract", () => {
 
       // Try to stake NFT
       await expect(
-        staker.connect(otherUser).stakeERC1155(nftERC1155.address, 2, 1)
+        staker.connect(otherUser).stakeERC1155(nftERC1155.address, 2, 1, 0)
       ).to.be.revertedWith("ERC1155: insufficient balance for transfer");
     });
 
     it("should not allow to stake an ERC1155 that is not approved by the staker", async () => {
       // Try to stake NFT
       await expect(
-        staker.connect(userNFT).stakeERC1155(nftERC1155.address, 1, 3)
+        staker.connect(userNFT).stakeERC1155(nftERC1155.address, 1, 3, 0)
       ).to.be.revertedWith("ERC1155: caller is not token owner or approved");
     });
 
@@ -193,7 +195,7 @@ describe("Staker Contract", () => {
       // Stake magic
       await staker
         .connect(userERC20)
-        .stakeFungible(magicContract.address, parseEther("100"));
+        .stakeFungible(magicContract.address, parseEther("100"), 0);
 
       // Try to unstake magic
       await expect(
@@ -211,12 +213,69 @@ describe("Staker Contract", () => {
         .setApprovalForAll(staker.address, true);
 
       // Stake NFT
-      await staker.connect(userNFT).stakeERC721(nftERC721.address, 1);
+      await staker.connect(userNFT).stakeERC721(nftERC721.address, 1, 0);
 
       // Try to unstake NFT
       await expect(
         staker.connect(userERC20).unstakeERC721(nftERC721.address, 1)
       ).to.be.revertedWith("Not enough tokens staked");
+    });
+
+    it('should not allow to unstake a token if the lock is not expired', async () => {
+
+      // Approve use
+      await nftERC721.connect(userNFT).setApprovalForAll(staker.address, true);
+
+      // Stake NFT
+      await staker.connect(userNFT).stakeERC721(nftERC721.address, 1, 1000000000);
+
+      // Try to unstake NFT
+      await expect(
+        staker.connect(userNFT).unstakeERC721(nftERC721.address, 1)
+      ).to.be.revertedWith("Lock time has not passed yet");
+    });
+
+    it('should allow to unstake a token if the lock is expired', async () => {
+
+      // Approve use
+      await nftERC721.connect(userNFT).setApprovalForAll(staker.address, true);
+
+      // One day lock time
+      const unlockTime = (await time.latest()) + 86400;
+
+      // Stake NFT
+      await staker.connect(userNFT).stakeERC721(nftERC721.address, 1, 1);
+
+      // We can increase the time in Hardhat Network
+      await time.increaseTo(unlockTime);
+
+      // Try to unstake NFT
+      await staker.connect(userNFT).unstakeERC721(nftERC721.address, 1);
+
+      // The owner of the NFT should be the user
+      expect(await nftERC721.ownerOf(1)).to.equal(userNFT.address);
+
+    });
+
+    it('should not allow to unstake a token if the lock is not expired, time travel half day', async () => {
+
+      // Approve use
+      await nftERC721.connect(userNFT).setApprovalForAll(staker.address, true);
+
+      // One day lock time
+      const unlockTime = (await time.latest()) + 40000;
+
+      // Stake NFT
+      await staker.connect(userNFT).stakeERC721(nftERC721.address, 1, 1);
+
+      // We can increase the time in Hardhat Network
+      await time.increaseTo(unlockTime);
+
+      // Try to unstake NFT
+      await expect(
+        staker.connect(userNFT).unstakeERC721(nftERC721.address, 1)
+      ).to.be.revertedWith("Lock time has not passed yet");
+      
     });
   });
 });
