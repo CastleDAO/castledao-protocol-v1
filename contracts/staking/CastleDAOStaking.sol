@@ -1,19 +1,28 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "./BaseStaker.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "./BaseStakerUpgradeable.sol";
 import "../interfaces/ITokenManager.sol";
 import "../ManagerModifier.sol";
 import "../interfaces/IRuby.sol";
 import "hardhat/console.sol";
 
-contract CastleDAOStaking is ManagerModifier, BaseStaker {
-    using EnumerableSet for EnumerableSet.UintSet;
+contract CastleDAOStaking is ManagerModifier, BaseStakerUpgradeable {
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.UintSet;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     // Address of the Ruby contract
     IRuby public ruby;
+
+    // Paused state
+    bool public paused;
+
+    modifier whenNotPaused() {
+        require(!paused, "Pausable: paused");
+        _;
+    }
 
     // List of allowed lock times
     mapping(uint256 => bool) public lockTimesAvailable;
@@ -27,14 +36,11 @@ contract CastleDAOStaking is ManagerModifier, BaseStaker {
     // Mapping of collection to rewards per day
     mapping(address => uint256) public collectionRewardsPerDay;
 
-    // List of allowed collections (addresses of contracts that can be staked)
-    mapping(address => bool) public allowedCollections;
-
     // Array with the allowed collections
-    address[] public allowedCollectionsArray;
+    EnumerableSetUpgradeable.AddressSet private allowedCollectionsArray;
 
     // Mapping to hold the staked tokens for a user, per collection
-    mapping(address => mapping(address => EnumerableSet.UintSet))
+    mapping(address => mapping(address => EnumerableSetUpgradeable.UintSet))
         internal userToTokensStaked;
 
     // Function to set the rewards per day for a collection, only manager
@@ -47,13 +53,12 @@ contract CastleDAOStaking is ManagerModifier, BaseStaker {
 
     // Function to add a new collection allowed to the staking contract
     function addCollection(address _collection) external onlyManager {
-        allowedCollections[_collection] = true;
-        allowedCollectionsArray.push(_collection);
+        allowedCollectionsArray.add(_collection);
     }
 
     // Function to remove a collection from the allowed collections
     function removeCollection(address _collection) external onlyManager {
-        allowedCollections[_collection] = false;
+        allowedCollectionsArray.remove(_collection);
     }
 
     function setLockTimes(uint256[] calldata _lockTimes) external onlyManager {
@@ -75,52 +80,72 @@ contract CastleDAOStaking is ManagerModifier, BaseStaker {
         daysLockedToReward[_days] = _reward;
     }
 
+    // Function to pause the staking contract
+    function setPaused(bool _paused) external onlyManager {
+        paused = _paused;
+    }
+
     // Constructor that receives the address of the Ruby contract, and the address of the initial allowed collections
     constructor(
         address _manager,
         address _ruby,
         address[] memory _collections,
-        uint256[] memory _rewardsPerDay
+        uint256[] memory _rewardsPerDay,
+        uint256[] memory _lockTimes,
+        uint256[] memory _rewards
     ) ManagerModifier(_manager) {
         ruby = IRuby(_ruby);
 
-        // Set the allowed lock times
-        lockTimesAvailable[0] = true;
-        lockTimesAvailable[15] = true;
-        lockTimesAvailable[30] = true;
-        lockTimesAvailable[50] = true;
-        lockTimesAvailable[100] = true;
+        require(
+            _collections.length == _rewardsPerDay.length,
+            "Not enough data"
+        );
+        require(_lockTimes.length == _rewards.length, "Not enough data");
 
-        // Set the base rewards per lock time
-        daysLockedToReward[0] = 2;
-        daysLockedToReward[15] = 10;
-        daysLockedToReward[30] = 25;
-        daysLockedToReward[50] = 40;
-        daysLockedToReward[100] = 100;
+        // Set the allowed lock times
+        for (uint256 i = 0; i < _lockTimes.length; i++) {
+            lockTimesAvailable[_lockTimes[i]] = true;
+            // Set the base rewards per lock time
+            daysLockedToReward[_lockTimes[i]] = _rewards[i];
+        }
 
         // Set the initial allowed collections
         for (uint256 i = 0; i < _collections.length; i++) {
-            allowedCollections[_collections[i]] = true;
-        }
-
-        allowedCollectionsArray = _collections;
-
-        // Set the initial rewards per day for each collection
-        for (uint256 i = 0; i < _collections.length; i++) {
+            // Set the initial rewards per day for each collection
             collectionRewardsPerDay[_collections[i]] = _rewardsPerDay[i];
+
+            allowedCollectionsArray.add(_collections[i]);
         }
+
     }
 
     // Function to stake a token, only allowed collections
     function stakeCastleDAONFT(
+        address[] calldata _collections,
+        uint256[] calldata _tokenIds,
+        uint256[] calldata _lockDays
+    ) external whenNotPaused {
+        require(
+            _collections.length > 0 &&
+                _collections.length == _tokenIds.length &&
+                _collections.length == _lockDays.length,
+            "Not enough data"
+        );
+
+        for (uint256 i = 0; i < _collections.length; i++) {
+            _stakeCastleDAONFT(_collections[i], _tokenIds[i], (_lockDays[i]));
+        }
+    }
+
+    function _stakeCastleDAONFT(
         address _collection,
         uint256 _tokenId,
         uint256 _lockDays
-    ) external {
-        require(allowedCollections[_collection], "Collection not allowed");
+    ) internal {
+        require(allowedCollectionsArray.contains(_collection), "Collection not allowed");
 
         // Check that the lock time is allowed
-        require(lockTimesAvailable[_lockDays], "Lock time not allowed");
+        require(lockTimesAvailable[_lockDays] == true, "Lock time not allowed");
 
         _stakeERC721ForUser(_collection, _tokenId, _lockDays, msg.sender);
         // Set last reward time
@@ -130,14 +155,31 @@ contract CastleDAOStaking is ManagerModifier, BaseStaker {
         userToTokensStaked[msg.sender][_collection].add(_tokenId);
     }
 
-    // Function to unstake a token, only allowed collections
-    function unstakeCastleDAONFT(address _collection, uint256 _tokenId)
-        external
-    {
-        require(allowedCollections[_collection], "Collection not allowed");
+    // Function to unstake tokens, only allowed collections
+    function unstakeCastleDAONFT(
+        address[] calldata _collections,
+        uint256[] calldata _tokenIds
+    ) external {
+        require(
+            _collections.length > 0 && _collections.length == _tokenIds.length,
+            "Not enough data"
+        );
 
-        // Claim rewards for this token
-        _claimRewards(_collection, _tokenId);
+        for (uint256 i = 0; i < _collections.length; i++) {
+            _unstakeCastleDAONFT(_collections[i], _tokenIds[i]);
+        }
+    }
+
+    // IT allows to unstake a token and claim the rewards
+    // Token can be unstaked even if the collection is not allowed anymore, but rewards are not distributed
+    function _unstakeCastleDAONFT(address _collection, uint256 _tokenId)
+        internal
+    {
+
+        if (allowedCollectionsArray.contains(_collection)) {
+            // Claim rewards for this token
+            _claimRewards(_collection, _tokenId);
+        }
 
         _unstakeERC721(_collection, _tokenId);
 
@@ -149,14 +191,11 @@ contract CastleDAOStaking is ManagerModifier, BaseStaker {
     function claimRewards() external {
         // Get the user's staked tokens and for each, claim the rewards
         // get the users tokens for each allowed collection and claim rewards
-        for (uint256 i = 0; i < allowedCollectionsArray.length; i++) {
-            address collection = allowedCollectionsArray[i];
-            uint256 totalTokens = userToTokensStaked[msg.sender][collection].length();
-            for (
-                uint256 j = 0;
-                j < totalTokens;
-                j++
-            ) {
+        for (uint256 i = 0; i < allowedCollectionsArray.length(); i++) {
+            address collection = allowedCollectionsArray.at(i);
+            uint256 totalTokens = userToTokensStaked[msg.sender][collection]
+                .length();
+            for (uint256 j = 0; j < totalTokens; j++) {
                 _claimRewards(
                     collection,
                     userToTokensStaked[msg.sender][collection].at(j)
@@ -195,21 +234,13 @@ contract CastleDAOStaking is ManagerModifier, BaseStaker {
         address _collection,
         uint256 _tokenId
     ) public view returns (uint256) {
+
         uint256 lastRewardTime = tokenIdToLastRewardTime[_collection][_tokenId];
         uint256 rewardAmount = 0;
         uint256 rewardDays = (block.timestamp - lastRewardTime) / 1 days;
         uint256 lockDuration = lockTime[_user][_collection][_tokenId]
             .lockDaysDuration;
-        console.log("lockDuration %s", lockDuration);
-        console.log("rewardDays %s", rewardDays);
-        console.log(
-            "collectionRewardsPerDay[_collection]  %s",
-            collectionRewardsPerDay[_collection]
-        );
-        console.log(
-            "daysLockedToReward[lockDuration]  %s",
-            daysLockedToReward[lockDuration]
-        );
+       
 
         rewardAmount =
             (daysLockedToReward[lockDuration] +
