@@ -4,7 +4,10 @@
   "main": "index.js",
   "scripts": {
     "test": "npx hardhat test",
-    "build": "npx hardhat compile"
+    "build": "npx hardhat compile",
+    "deploy:testnet": "npx hardhat run --network arbitrumgoerli scripts/deployProtocol.ts",
+    "deploy:mainnet": "npx hardhat run --network arbitrummainnet scripts/deployProtocol.ts",
+    "cap": "npx hardhat run scripts/marketcap/index.ts"
   },
   "license": "MIT",
   "devDependencies": {
