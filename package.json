@@ -4,11 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npx hardhat test",
-    "build": "npx hardhat compile",
-    "deploy:testnet": "npx hardhat run --network arbitrumgoerli scripts/deployProtocol.ts",
-    "deploy:mainnet": "npx hardhat run --network arbitrummainnet scripts/deployProtocol.ts",
-    "cap": "npx hardhat run scripts/marketcap/index.ts",
-    "generateAirdrop": "npx hardhat run --network arbitrummainnet scripts/marketcap/generateAirdrop.ts"
+    "build": "npx hardhat compile"
   },
   "license": "MIT",
   "devDependencies": {
@@ -35,7 +31,6 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.1",
-    "@openzeppelin/contracts-upgradeable": "^4.8.1",
     "keccak256": "^1.0.6",
     "merkletreejs": "^0.3.9"
   }
