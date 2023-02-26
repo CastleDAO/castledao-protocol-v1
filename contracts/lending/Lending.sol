@@ -3,18 +3,20 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
+import "../staking/BaseStaker.sol";
 import "../ManagerModifier.sol";
 import "../interfaces/IRuby.sol";
 
 contract Lending is
     ManagerModifier,
-    BaseStakerUpgradeable,
-    PuasableUpgradeable
+    BaseStaker,
+    Pausable
 {
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.UintSet;
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+    using EnumerableSet for EnumerableSet.UintSet;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     IRuby public ruby;
     IERC20 public magic;
@@ -27,18 +29,18 @@ contract Lending is
     uint256 public totalLoanFees;
 
     // Mapping of all collections
-    EnumerableSetUpgradeable.AddressSet private allCollections;
+    EnumerableSet.AddressSet private allCollections;
     // Mapping of active collections
     mapping(address => bool) public activeCollections;
 
     // Fees for the loan
-    mapping(address => uint256) public collectionsAPY;
+    mapping(address => uint256) public collectionFeesAPY;
 
     // Max loan ratio for a collection
     mapping(address => uint256) public collectionsMaxLoanRatio;
 
     // Max earnings ratio for a collection
-    mapping(address => uint256) public collectionsRubyRewards;
+    mapping(address => uint256) public collectionRewardsAPY;
 
     // Mapping of collection floor prices
     mapping(address => uint256) public collectionsFloorPrices;
@@ -50,8 +52,11 @@ contract Lending is
         uint256 _maxLoanRatio
     ) external onlyManager {
         allCollections.add(_collection);
-        collectionsAPY[_collection] = _apy;
+        collectionFeesAPY[_collection] = _apy;
         collectionsMaxLoanRatio[_collection] = _maxLoanRatio;
+
+        // Emit event
+        emit CollectionAdded(_collection, _apy, _maxLoanRatio);
     }
 
     // Function to remove a collection from the allowed collections
@@ -60,19 +65,28 @@ contract Lending is
         onlyManager
     {
         activeCollections[_collection] = _active;
+
+        // Emit event
+        emit CollectionActiveSet(_collection, _active);
     }
 
     // Function to set the rewards APY for a collection, only manager
-    function setRewardsPerDay(address _collection, uint256 _rewardsAPY)
+    function setRewardsAPY(address _collection, uint256 _rewardsAPY)
         external
         onlyManager
     {
-        collectionsRubyRewards[_collection] = _rewardsAPY;
+        collectionRewardsAPY[_collection] = _rewardsAPY;
+
+        // Emit event
+        emit RewardsAPYSet(_collection, _rewardsAPY);
     }
 
-    // Function to set the rewards APY for a collection, only manager
-    function setAPY(address _collection, uint256 _apy) external onlyManager {
-        collectionsAPY[_collection] = _apy;
+    // Function to set the fees APY for a collection, only manager
+    function setfeesAPY(address _collection, uint256 _apy) external onlyManager {
+        collectionFeesAPY[_collection] = _apy;
+
+        // Emit event
+        emit FeesAPYSet(_collection, _apy);
     }
 
     // Function to set the max loan ratio for a collection, only manager
@@ -81,6 +95,9 @@ contract Lending is
         onlyManager
     {
         collectionsMaxLoanRatio[_collection] = _maxLoanRatio;
+
+        // Emit event
+        emit MaxLoanRatioSet(_collection, _maxLoanRatio);
     }
 
     // Function to set the floor price for a collection, only oracle
@@ -89,10 +106,13 @@ contract Lending is
         onlyOracle
     {
         collectionsFloorPrices[_collection] = _floorPrice;
+
+        // Emit event
+        emit FloorPriceSet(_collection, _floorPrice);
     }
 
     // Mapping to hold the staked tokens for a user, per collection
-    mapping(address => mapping(address => EnumerableSetUpgradeable.UintSet))
+    mapping(address => mapping(address => EnumerableSet.UintSet))
         internal userToTokensStaked;
 
     struct Loan {
@@ -124,7 +144,7 @@ contract Lending is
         require(activeCollections[_collection], "Collection not allowed");
 
         // Stake the token
-        _stakeERC721ForUser(_collection, _tokenId, _lockDays, msg.sender);
+        _stakeERC721ForUser(_collection, _tokenId, 0, msg.sender);
 
         // Add the token to the user's staked tokens
         userToTokensStaked[msg.sender][_collection].add(_tokenId);
@@ -176,7 +196,7 @@ contract Lending is
         // Get the total loan amount for the user
         Loan memory loan = loans[_user][_collection];
         if (loan.amount == 0) {
-            return (0, 0);
+            return (0, 0, 0);
         }
 
         // get the total value locked for the user
@@ -278,7 +298,7 @@ contract Lending is
 
         // Calculate the fees
         uint256 fees = (loan.amount *
-            collectionsAPY[_collection] *
+            collectionFeesAPY[_collection] *
             (block.timestamp - loan.loanUpdatedTimestamp)) / (365 * 1 days);
 
         return fees + loan.totalFees;
@@ -360,14 +380,14 @@ contract Lending is
     }
 
     // Claim rewards for a user
-    function claimRewards(_collection) public {
+    function claimRewards(address _collection) public {
         _claimRewards(msg.sender, _collection);
     }
 
     function _claimRewards(address _user, address _collection) internal {
         // Rewards APY of the collection, divided by 365 and multiplied by the number of days since the last claim
         uint256 rewards = (loans[_user][_collection].amount *
-            collectionsRubyRewards[_collection] *
+            collectionRewardsAPY[_collection] *
             (block.timestamp - loans[_user][_collection].lastRewardTimestamp)) /
             (365 * 1 days);
 
@@ -385,4 +405,41 @@ contract Lending is
         // Emit event
         emit RewardsClaimed(_user, rewards);
     }
+
+    // Events for the contract
+    event CollateralAdded(address indexed user, address indexed collection, uint256 tokenId);
+
+    event CollateralRemoved(address indexed user, address indexed collection, uint256 tokenId);
+
+    event LoanTaken(address indexed user, uint256 amount);
+
+    event LoanRepayed(address indexed user, uint256 amount);
+
+    event LoanClosed(address indexed user, uint256 amount);
+
+    event RewardsClaimed(address indexed user, uint256 amount);
+
+    event CollectionAdded(
+        address indexed collection,
+        uint256 apy,
+        uint256 maxLoanRatio
+    );
+
+    event CollectionRemoved(address indexed collection);
+
+    event CollectionActiveSet(address indexed collection, bool active);
+
+    event FeesAPYSet(address indexed collection, uint256 apy);
+
+    event RewardsAPYSet(
+        address indexed collection,
+        uint256 rubyRewards
+    );
+
+    event MaxLoanRatioSet(address collection, uint256 maxLoanRatio);
+
+    event FloorPriceSet(address collection, uint256 floorPrice);
+
+    
+
 }
