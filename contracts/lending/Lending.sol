@@ -43,7 +43,7 @@ contract Lending is
     mapping(address => uint256) public collectionRewardsAPY;
 
     // Mapping of collection floor prices
-    mapping(address => uint256) public collectionsFloorPrices;
+    mapping(address => uint256) public collectionsFloorPrice;
 
     // Function to add a new collection allowed to the staking contract
     function addCollection(
@@ -60,7 +60,7 @@ contract Lending is
     }
 
     // Function to remove a collection from the allowed collections
-    function setActiveCollection(address _collection, bool _active)
+    function setCollectionActive(address _collection, bool _active)
         external
         onlyManager
     {
@@ -90,7 +90,7 @@ contract Lending is
     }
 
     // Function to set the max loan ratio for a collection, only manager
-    function setMaxLoanRatio(address _collection, uint256 _maxLoanRatio)
+    function setCollectionMaxLoanRatio(address _collection, uint256 _maxLoanRatio)
         external
         onlyManager
     {
@@ -101,11 +101,11 @@ contract Lending is
     }
 
     // Function to set the floor price for a collection, only oracle
-    function setFloorPrice(address _collection, uint256 _floorPrice)
+    function setCollectionFloorPrice(address _collection, uint256 _floorPrice)
         external
         onlyOracle
     {
-        collectionsFloorPrices[_collection] = _floorPrice;
+        collectionsFloorPrice[_collection] = _floorPrice;
 
         // Emit event
         emit FloorPriceSet(_collection, _floorPrice);
@@ -113,7 +113,7 @@ contract Lending is
 
     // Mapping to hold the staked tokens for a user, per collection
     mapping(address => mapping(address => EnumerableSet.UintSet))
-        internal userToTokensStaked;
+        internal userCollateral;
 
     struct Loan {
         // Amount borrowed
@@ -140,20 +140,20 @@ contract Lending is
         magic = IERC20(_magic);
     }
 
-    function addCollateral(address _collection, uint256 _tokenId) internal {
+    function addCollateral(address _collection, uint256 _tokenId) public {
         require(activeCollections[_collection], "Collection not allowed");
 
         // Stake the token
         _stakeERC721ForUser(_collection, _tokenId, 0, msg.sender);
 
         // Add the token to the user's staked tokens
-        userToTokensStaked[msg.sender][_collection].add(_tokenId);
+        userCollateral[msg.sender][_collection].add(_tokenId);
 
         // Emit event
         emit CollateralAdded(msg.sender, _collection, _tokenId);
     }
 
-    function removeCollateral(address _collection, uint256 _tokenId) internal {
+    function removeCollateral(address _collection, uint256 _tokenId) public {
         // Get the total loan amount and LTV for the user
         (
             uint256 totalLoanAmount,
@@ -168,7 +168,7 @@ contract Lending is
         );
 
         uint256 newLTV = ((totalValueLocked -
-            collectionsFloorPrices[_collection]) * 100) / totalValueLocked;
+            collectionsFloorPrice[_collection]) * 100) / totalValueLocked;
         require(
             newLTV <= collectionsMaxLoanRatio[_collection],
             "Cannot remove collateral, LTV ratio too high"
@@ -177,7 +177,7 @@ contract Lending is
         _unstakeERC721(_collection, _tokenId);
 
         // Remove the token from the user's staked tokens
-        userToTokensStaked[msg.sender][_collection].remove(_tokenId);
+        userCollateral[msg.sender][_collection].remove(_tokenId);
 
         // Emit event
         emit CollateralRemoved(msg.sender, _collection, _tokenId);
@@ -200,11 +200,11 @@ contract Lending is
         }
 
         // get the total value locked for the user
-        uint256 totalTokens = userToTokensStaked[msg.sender][_collection]
+        uint256 totalTokens = userCollateral[msg.sender][_collection]
             .length();
 
         uint256 totalValueLocked = totalTokens *
-            collectionsFloorPrices[_collection];
+            collectionsFloorPrice[_collection];
 
         // Calculate the LTV ratio
         uint256 ltvRatio = 0;
@@ -404,6 +404,23 @@ contract Lending is
 
         // Emit event
         emit RewardsClaimed(_user, rewards);
+    }
+
+    // function to get the collateral of a user
+    function getUserCollateralAmount(address _user, address _collection)
+        public
+        view
+        returns (uint256)
+    {
+        return userCollateral[_user][_collection].length();
+    }
+
+    function getUserCollateralAt(
+        address _user,
+        address _collection,
+        uint256 _index
+    ) public view returns (uint256) {
+        return userCollateral[_user][_collection].at(_index);
     }
 
     // Events for the contract
