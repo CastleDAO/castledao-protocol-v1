@@ -43,9 +43,4 @@ abstract contract ManagerModifier {
     require(MANAGER.isManager(msg.sender, 3), "Manager: Not binder");
     _;
   }
-
-  modifier onlyOracle() {
-    require(MANAGER.isManager(msg.sender, 4), "Manager: Not oracle");
-    _;
-  }
 }
