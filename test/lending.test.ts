@@ -92,7 +92,11 @@ describe("Lending", function () {
             await nftERC721.mint(await userWithNFT.getAddress());
         }
         
+        // Send 1000 tokens to the lending contract
+        await magicContract.connect(owner).transfer(lending.address, parseEther('1000'));
 
+        // Log the magic balance of the lending contract
+        console.log('Magic balance of lending contract: ', await magicContract.balanceOf(lending.address));
 
     });
 
@@ -145,6 +149,49 @@ describe("Lending", function () {
         await lending.connect(userWithNFT).addCollateral(nftERC721.address, 1);
         expect(await lending.getUserCollateralAmount(await userWithNFT.getAddress(), nftERC721.address)).to.equal(1);
     });
+
+    describe('Smol Brains lending', () => {
+        beforeEach(async () => {
+            // Max loan ratio 10%, if floor is 1000 and max loan ratio is 10% then max loan per item is 100
+            
+            await lending.addCollection(nftERC721.address, 10, 10);
+            await lending.setCollectionActive(nftERC721.address, true);
+            // set floor price
+            await lending.connect(oracleUser).setCollectionFloorPrice(nftERC721.address, parseEther('1000'));
+            // approve collection
+            await nftERC721.connect(userWithNFT).setApprovalForAll(lending.address, true);
+            await lending.connect(userWithNFT).addCollateral(nftERC721.address, 1);
+        })
+
+        it('Should not allow the user to borrow more than the max loan ratio', async () => {
+            
+            await expect(lending.connect(userWithNFT).borrow(parseEther('200'), nftERC721.address)).to.be.revertedWith('Cannot borrow, LTV ratio too high');
+        });
+
+        it('Should allow the user to borrow up to the max loan ratio', async () => {
+            const loanInfoFirst = await lending.getUserLoanAmountAndTVL(await userWithNFT.getAddress(), nftERC721.address);
+            // Loan amount should be 0 initially
+            expect(loanInfoFirst[0]).to.equal(0);
+            
+            // Log magic balance of lending contract
+            // Allow the lending contract to use magic 
+            await lending.connect(userWithNFT).borrow(parseEther('100'), nftERC721.address);
+            expect(await magicContract.balanceOf(await userWithNFT.getAddress())).to.equal(parseEther('100'));
+
+            // Check the user has a loan
+            const loanInfo = await lending.getUserLoanAmountAndTVL(await userWithNFT.getAddress(), nftERC721.address);
+          
+            // total borrowed should be 100
+            expect(loanInfo[0]).to.equal(parseEther('100'));
+
+            // total value locked should be 1000
+            expect(loanInfo[1]).to.equal(parseEther('1000'));
+
+            // Get LTV ratio
+            const ltvRatio = await lending.getUserLTV(await userWithNFT.getAddress(), nftERC721.address);
+            expect(ltvRatio).to.equal(10);
+        })
+    })
 
 
 

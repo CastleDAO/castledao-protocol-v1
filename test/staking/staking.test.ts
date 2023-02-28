@@ -5,7 +5,6 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
-
 describe("Staker Contract", () => {
   // Contracts used in the tests
   let staker: Contract;
@@ -205,6 +204,33 @@ describe("Staker Contract", () => {
       ).to.be.revertedWith("Not enough tokens staked");
     });
 
+    it("Should allow a user to unstake their own fungible tokens", async () => {
+      // Approve use
+      await magicContract
+        .connect(userERC20)
+        .approve(staker.address, parseEther("100"));
+
+      // Stake magic
+      await staker
+        .connect(userERC20)
+        .stakeFungible(magicContract.address, parseEther("100"), 0);
+
+      // Unstake magic
+      await staker
+        .connect(userERC20)
+        .unstakeFungible(magicContract.address, parseEther("100"));
+
+      // The userERC20 should have the magic tokens back
+      expect(await magicContract.balanceOf(userERC20.address)).to.equal(
+        parseEther("200")
+      );
+
+      // The staker contract should count 0 magic tokens staked
+      expect(
+        await staker.getCollectionStakedTokensCount(magicContract.address)
+      ).to.equal(0);
+    });
+
     it("Should not allow another user to unstake other users NFTs", async () => {
       // Approve use
       await nftERC721.connect(userNFT).setApprovalForAll(staker.address, true);
@@ -221,13 +247,14 @@ describe("Staker Contract", () => {
       ).to.be.revertedWith("Not enough tokens staked");
     });
 
-    it('should not allow to unstake a token if the lock is not expired', async () => {
-
+    it("should not allow to unstake a token if the lock is not expired", async () => {
       // Approve use
       await nftERC721.connect(userNFT).setApprovalForAll(staker.address, true);
 
       // Stake NFT
-      await staker.connect(userNFT).stakeERC721(nftERC721.address, 1, 1000000000);
+      await staker
+        .connect(userNFT)
+        .stakeERC721(nftERC721.address, 1, 1000000000);
 
       // Try to unstake NFT
       await expect(
@@ -235,8 +262,7 @@ describe("Staker Contract", () => {
       ).to.be.revertedWith("Lock time has not passed yet");
     });
 
-    it('should allow to unstake a token if the lock is expired', async () => {
-
+    it("should allow to unstake a token if the lock is expired", async () => {
       // Approve use
       await nftERC721.connect(userNFT).setApprovalForAll(staker.address, true);
 
@@ -254,11 +280,9 @@ describe("Staker Contract", () => {
 
       // The owner of the NFT should be the user
       expect(await nftERC721.ownerOf(1)).to.equal(userNFT.address);
-
     });
 
-    it('should not allow to unstake a token if the lock is not expired, time travel half day', async () => {
-
+    it("should not allow to unstake a token if the lock is not expired, time travel half day", async () => {
       // Approve use
       await nftERC721.connect(userNFT).setApprovalForAll(staker.address, true);
 
@@ -275,7 +299,6 @@ describe("Staker Contract", () => {
       await expect(
         staker.connect(userNFT).unstakeERC721(nftERC721.address, 1)
       ).to.be.revertedWith("Lock time has not passed yet");
-      
     });
   });
 });

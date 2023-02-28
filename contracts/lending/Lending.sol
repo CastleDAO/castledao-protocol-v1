@@ -5,16 +5,13 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "hardhat/console.sol";
 
 import "../staking/BaseStaker.sol";
 import "../ManagerModifier.sol";
 import "../interfaces/IRuby.sol";
 
-contract Lending is
-    ManagerModifier,
-    BaseStaker,
-    Pausable
-{
+contract Lending is ManagerModifier, BaseStaker, Pausable {
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -82,7 +79,10 @@ contract Lending is
     }
 
     // Function to set the fees APY for a collection, only manager
-    function setfeesAPY(address _collection, uint256 _apy) external onlyManager {
+    function setfeesAPY(address _collection, uint256 _apy)
+        external
+        onlyManager
+    {
         collectionFeesAPY[_collection] = _apy;
 
         // Emit event
@@ -90,10 +90,10 @@ contract Lending is
     }
 
     // Function to set the max loan ratio for a collection, only manager
-    function setCollectionMaxLoanRatio(address _collection, uint256 _maxLoanRatio)
-        external
-        onlyManager
-    {
+    function setCollectionMaxLoanRatio(
+        address _collection,
+        uint256 _maxLoanRatio
+    ) external onlyManager {
         collectionsMaxLoanRatio[_collection] = _maxLoanRatio;
 
         // Emit event
@@ -157,18 +157,11 @@ contract Lending is
         // Get the total loan amount and LTV for the user
         (
             uint256 totalLoanAmount,
-            uint256 totalValueLocked,
-            uint256 ltvRatio
-        ) = getUserLoanAndTVLAndLTV(msg.sender, _collection);
+            uint256 totalValueLocked
+        ) = getUserLoanAmountAndTVL(msg.sender, _collection);
 
-        // If we remove this token, the LTV ratio will be higher than the max allowed
-        require(
-            ltvRatio <= collectionsMaxLoanRatio[_collection],
-            "Cannot remove collateral, LTV ratio too high"
-        );
-
-        uint256 newLTV = ((totalValueLocked -
-            collectionsFloorPrice[_collection]) * 100) / totalValueLocked;
+        uint256 newLTV = (totalLoanAmount * 100) /
+            (totalValueLocked - collectionsFloorPrice[_collection]);
         require(
             newLTV <= collectionsMaxLoanRatio[_collection],
             "Cannot remove collateral, LTV ratio too high"
@@ -184,35 +177,46 @@ contract Lending is
     }
 
     // Function to calculate the total TVL and LTV ratio for a user
-    function getUserLoanAndTVLAndLTV(address _user, address _collection)
+    function getUserLoanAmountAndTVL(address _user, address _collection)
         public
         view
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
+        returns (uint256, uint256)
     {
-        // Get the total loan amount for the user
-        Loan memory loan = loans[_user][_collection];
-        if (loan.amount == 0) {
-            return (0, 0, 0);
-        }
-
         // get the total value locked for the user
-        uint256 totalTokens = userCollateral[msg.sender][_collection]
-            .length();
+        uint256 totalTokens = userCollateral[_user][_collection].length();
 
         uint256 totalValueLocked = totalTokens *
             collectionsFloorPrice[_collection];
 
+        // Get the total loan amount for the user
+        Loan memory loan = loans[_user][_collection];
+
+        return (loan.amount, totalValueLocked);
+    }
+
+    // Function to get the LTV ratio for a user
+    function getUserLTV(address _user, address _collection)
+        public
+        view
+        returns (uint256)
+    {
+        // Get the total loan amount and TVL for the user
+        (
+            uint256 totalLoanAmount,
+            uint256 totalValueLocked
+        ) = getUserLoanAmountAndTVL(_user, _collection);
+
         // Calculate the LTV ratio
-        uint256 ltvRatio = 0;
-        if (totalValueLocked > 0) {
-            ltvRatio = (loan.amount * 100) / totalValueLocked;
+        if (totalValueLocked == 0) {
+            return 0;
+        }
+        if (totalLoanAmount == 0) {
+            return 0;
         }
 
-        return (loan.amount, totalValueLocked, ltvRatio);
+        uint256 ltvRatio = (totalLoanAmount * 100) / totalValueLocked;
+
+        return ltvRatio;
     }
 
     function borrow(uint256 _amount, address _collection) public {
@@ -225,15 +229,8 @@ contract Lending is
         // Get the total loan amount and LTV for the user
         (
             uint256 totalLoanAmount,
-            uint256 totalValueLocked,
-            uint256 ltvRatio
-        ) = getUserLoanAndTVLAndLTV(msg.sender, _collection);
-
-        // Check if the user has enough collateral
-        require(
-            ltvRatio <= collectionsMaxLoanRatio[_collection],
-            "Cannot borrow, LTV ratio too high"
-        );
+            uint256 totalValueLocked
+        ) = getUserLoanAmountAndTVL(msg.sender, _collection);
 
         // Check if the user has enough collateral
         require(
@@ -242,15 +239,16 @@ contract Lending is
         );
 
         // Require that the new LTV ratio is lower than the max allowed
-        uint256 newLTV = ((totalValueLocked - _amount) * 100) /
-            totalValueLocked;
+        uint256 newLTV = ((totalLoanAmount + _amount) * 100) / totalValueLocked;
         require(
             newLTV <= collectionsMaxLoanRatio[_collection],
             "Cannot borrow, LTV ratio too high"
         );
 
+        console.log("Contract transfer   %s tokens to %s", _amount, msg.sender);
+        
         // Transfer the amount to the user
-        magic.transferFrom(msg.sender, address(this), _amount);
+        magic.transfer(msg.sender, _amount);
 
         // If the user already has a loan, add the new amount to the existing loan
         if (loans[msg.sender][_collection].amount > 0) {
@@ -397,6 +395,7 @@ contract Lending is
         // Update the total rewards claimed
         loans[_user][_collection].totalRewardsClaimed += rewards;
 
+        console.log("Rewards transfer   %s tokens to %s", rewards, msg.sender);
         if (rewards > 0) {
             // Mint the rewards to the user
             ruby.mintFor(_user, rewards);
@@ -424,9 +423,17 @@ contract Lending is
     }
 
     // Events for the contract
-    event CollateralAdded(address indexed user, address indexed collection, uint256 tokenId);
+    event CollateralAdded(
+        address indexed user,
+        address indexed collection,
+        uint256 tokenId
+    );
 
-    event CollateralRemoved(address indexed user, address indexed collection, uint256 tokenId);
+    event CollateralRemoved(
+        address indexed user,
+        address indexed collection,
+        uint256 tokenId
+    );
 
     event LoanTaken(address indexed user, uint256 amount);
 
@@ -448,15 +455,9 @@ contract Lending is
 
     event FeesAPYSet(address indexed collection, uint256 apy);
 
-    event RewardsAPYSet(
-        address indexed collection,
-        uint256 rubyRewards
-    );
+    event RewardsAPYSet(address indexed collection, uint256 rubyRewards);
 
     event MaxLoanRatioSet(address collection, uint256 maxLoanRatio);
 
     event FloorPriceSet(address collection, uint256 floorPrice);
-
-    
-
 }

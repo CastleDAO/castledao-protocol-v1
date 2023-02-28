@@ -240,7 +240,7 @@ contract BaseStaker is ERC1155Holder, ERC721Holder {
 
         // Call the transfer function of the specified transfer contract
         ERC20 tokenContract = ERC20(_collection);
-        tokenContract.transferFrom(address(this), msg.sender, _amount);
+        tokenContract.transfer(msg.sender, _amount);
         // Update the staked tokens mapping
         stakedTokens[msg.sender][_collection][0] -= _amount;
 
