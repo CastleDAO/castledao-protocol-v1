@@ -25,35 +25,46 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
     // Loan fees accumulated
     uint256 public totalLoanFees;
 
+    struct Collection {
+        bool active;
+        uint256 feesAPY;
+        uint256 maxLoanRatio;
+        uint256 rewardsAPY;
+        uint256 floorPrice;
+        uint256 liquidationRatio;
+    }
+
     // Mapping of all collections
     EnumerableSet.AddressSet private allCollections;
-    // Mapping of active collections
-    mapping(address => bool) public activeCollections;
-
-    // Fees for the loan
-    mapping(address => uint256) public collectionFeesAPY;
-
-    // Max loan ratio for a collection
-    mapping(address => uint256) public collectionsMaxLoanRatio;
-
-    // Max earnings ratio for a collection
-    mapping(address => uint256) public collectionRewardsAPY;
-
-    // Mapping of collection floor prices
-    mapping(address => uint256) public collectionsFloorPrice;
+    // Mapping of collections
+    mapping(address => Collection) public collections;
 
     // Function to add a new collection allowed to the staking contract
     function addCollection(
         address _collection,
         uint256 _apy,
-        uint256 _maxLoanRatio
+        uint256 _maxLoanRatio,
+        uint256 _rewardsAPY,
+        uint256 _floorPrice,
+        uint256 _liquidationRatio
     ) external onlyManager {
         allCollections.add(_collection);
-        collectionFeesAPY[_collection] = _apy;
-        collectionsMaxLoanRatio[_collection] = _maxLoanRatio;
+        collections[_collection].active = true;
+        collections[_collection].feesAPY = _apy;
+        collections[_collection].maxLoanRatio = _maxLoanRatio;
+        collections[_collection].rewardsAPY = _rewardsAPY;
+        collections[_collection].floorPrice = _floorPrice;
+        collections[_collection].liquidationRatio = _liquidationRatio;
 
         // Emit event
-        emit CollectionAdded(_collection, _apy, _maxLoanRatio);
+        emit CollectionAdded(
+            _collection,
+            _apy,
+            _maxLoanRatio,
+            _rewardsAPY,
+            _floorPrice,
+            _liquidationRatio
+        );
     }
 
     // Function to remove a collection from the allowed collections
@@ -61,7 +72,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         external
         onlyManager
     {
-        activeCollections[_collection] = _active;
+        collections[_collection].active = _active;
 
         // Emit event
         emit CollectionActiveSet(_collection, _active);
@@ -72,7 +83,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         external
         onlyManager
     {
-        collectionRewardsAPY[_collection] = _rewardsAPY;
+        collections[_collection].rewardsAPY = _rewardsAPY;
 
         // Emit event
         emit RewardsAPYSet(_collection, _rewardsAPY);
@@ -83,8 +94,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         external
         onlyManager
     {
-        collectionFeesAPY[_collection] = _apy;
-
+        collections[_collection].feesAPY = _apy;
         // Emit event
         emit FeesAPYSet(_collection, _apy);
     }
@@ -94,7 +104,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         address _collection,
         uint256 _maxLoanRatio
     ) external onlyManager {
-        collectionsMaxLoanRatio[_collection] = _maxLoanRatio;
+        collections[_collection].maxLoanRatio = _maxLoanRatio;
 
         // Emit event
         emit MaxLoanRatioSet(_collection, _maxLoanRatio);
@@ -105,10 +115,21 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         external
         onlyOracle
     {
-        collectionsFloorPrice[_collection] = _floorPrice;
+        collections[_collection].floorPrice = _floorPrice;
 
         // Emit event
         emit FloorPriceSet(_collection, _floorPrice);
+    }
+
+    // Function to set the liquidation ratio for a collection, only oracle
+    function setCollectionLiquidationRatio(
+        address _collection,
+        uint256 _liquidationRatio
+    ) external onlyOracle {
+        collections[_collection].liquidationRatio = _liquidationRatio;
+
+        // Emit event
+        emit LiquidationRatioSet(_collection, _liquidationRatio);
     }
 
     // Mapping to hold the staked tokens for a user, per collection
@@ -141,7 +162,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
     }
 
     function addCollateral(address _collection, uint256 _tokenId) public {
-        require(activeCollections[_collection], "Collection not allowed");
+        require(collections[_collection].active, "Collection not allowed");
 
         // Stake the token
         _stakeERC721ForUser(_collection, _tokenId, 0, msg.sender);
@@ -161,9 +182,9 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         ) = getUserLoanAmountAndTVL(msg.sender, _collection);
 
         uint256 newLTV = (totalLoanAmount * 100) /
-            (totalValueLocked - collectionsFloorPrice[_collection]);
+            (totalValueLocked - collections[_collection].floorPrice);
         require(
-            newLTV <= collectionsMaxLoanRatio[_collection],
+            newLTV <= collections[_collection].maxLoanRatio,
             "Cannot remove collateral, LTV ratio too high"
         );
 
@@ -186,7 +207,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         uint256 totalTokens = userCollateral[_user][_collection].length();
 
         uint256 totalValueLocked = totalTokens *
-            collectionsFloorPrice[_collection];
+            collections[_collection].floorPrice;
 
         // Get the total loan amount for the user
         Loan memory loan = loans[_user][_collection];
@@ -241,7 +262,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         // Require that the new LTV ratio is lower than the max allowed
         uint256 newLTV = ((totalLoanAmount + _amount) * 100) / totalValueLocked;
         require(
-            newLTV <= collectionsMaxLoanRatio[_collection],
+            newLTV <= collections[_collection].maxLoanRatio,
             "Cannot borrow, LTV ratio too high"
         );
 
@@ -295,7 +316,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
             1 days;
 
         uint256 _yearFeeAmount = (loan.amount *
-            collectionFeesAPY[_collection]) / 100;
+            collections[_collection].feesAPY) / 100;
         uint256 fees = (_yearFeeAmount * _days) / 365;
 
         return fees + loan.accumulatedFees;
@@ -391,7 +412,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
             loans[_user][_collection].lastRewardTimestamp) / 1 days;
 
         uint256 _yearFeeAmount = (loans[_user][_collection].amount *
-            collectionRewardsAPY[_collection]) / 100;
+            collections[_collection].rewardsAPY) / 100;
         uint256 rewards = (_yearFeeAmount * _days) / 365;
 
         console.log(
@@ -415,6 +436,67 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
 
         // Emit event
         emit RewardsClaimed(_user, rewards);
+    }
+
+    // Public function to check if a loan is liquidatable
+    function isLiquidatable(address _user, address _collection)
+        public
+        view
+        returns (bool)
+    {
+        if (loans[_user][_collection].amount == 0) {
+            return false;
+        }
+
+        // Check that the liquidation ratio is passed
+        // Divide loan.amount to totalValueLocked to get the ratio
+        (
+            uint256 totalLoanAmount,
+            uint256 totalValueLocked
+        ) = getUserLoanAmountAndTVL(msg.sender, _collection);
+
+        uint256 LTV = ((totalLoanAmount) * 100) / totalValueLocked;
+
+        return LTV > collections[_collection].liquidationRatio;
+    }
+
+    // Liquidation function, requires paying back loan and fees to receive collateral
+    function liquidateLoan(
+        address _user,
+        address _collection,
+        uint256 _amount
+    ) public {
+        // Check that the loan is active and it's not 0
+        require(
+            isLiquidatable(_user, _collection),
+            "Cannot liquidate, no active loan"
+        );
+
+        // Check that the amount is equal to the debt + fees
+        uint256 totalFees = getUserLoanFees(_user, _collection);
+        uint256 totalDebt = loans[_user][_collection].amount + totalFees;
+
+        require(
+            _amount >= totalDebt,
+            "Not enough magic to liquidate, please input the right amount"
+        );
+
+        // Receive the total debt
+        magic.transferFrom(msg.sender, address(this), totalDebt);
+
+        // Unstake collateral and send to the liquidator
+        for (
+            uint256 i = 0;
+            i < userCollateral[_user][_collection].length();
+            i++
+        ) {
+            uint256 tokenId = userCollateral[_user][_collection].at(i);
+            _unstakeERC721(_collection, tokenId);
+        }
+
+        // Delete the loand and emit a liquidation event
+        emit LoanLiquidated(_user, _collection, loans[_user][_collection]);
+        delete loans[_user][_collection];
     }
 
     // function to get the collateral of a user
@@ -453,6 +535,8 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
 
     event LoanClosed(address indexed user, uint256 amount);
 
+    event LoanLiquidated(address indexed user, address collection, Loan loan);
+
     event RewardsClaimed(address indexed user, uint256 amount);
 
     event CollectionAdded(
@@ -472,4 +556,6 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
     event MaxLoanRatioSet(address collection, uint256 maxLoanRatio);
 
     event FloorPriceSet(address collection, uint256 floorPrice);
+
+    event LiquidationRatioSet(address collection, uint256 liquidationRatio);
 }
