@@ -300,5 +300,6 @@ describe("Staker Contract", () => {
         staker.connect(userNFT).unstakeERC721(nftERC721.address, 1)
       ).to.be.revertedWith("Lock time has not passed yet");
     });
+    
   });
 });

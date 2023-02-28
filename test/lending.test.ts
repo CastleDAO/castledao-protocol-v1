@@ -4,6 +4,7 @@ import { Contract } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 
 // Contracts used in the tests
@@ -191,6 +192,33 @@ describe("Lending", function () {
             const ltvRatio = await lending.getUserLTV(await userWithNFT.getAddress(), nftERC721.address);
             expect(ltvRatio).to.equal(10);
         })
+
+        // at 10% apy for 1 year, the 100 loan should be repaid with 110
+    it('should increase fees after 1 year', async () => {
+        await lending.connect(userWithNFT).borrow(parseEther('100'), nftERC721.address);
+        await time.increase(time.duration.years(1));
+        
+        // Get the fees
+        const fees = await lending.getUserLoanFees(await userWithNFT.getAddress(), nftERC721.address);
+        console.log('eee', fees)
+        expect(fees).to.equal(parseEther('10'));
+
+        // Get the total amount to repay
+        const loan = await lending.loans(await userWithNFT.getAddress(), nftERC721.address);
+        console.log(loan)
+        // loan amount is 100
+        expect(loan.amount).to.equal(parseEther('100'));
+
+        // Increase another year
+        await time.increase(time.duration.years(1));
+
+        // Get the fees
+        const fees2 = await lending.getUserLoanFees(await userWithNFT.getAddress(), nftERC721.address);
+
+        // Fees should be 20
+        expect(fees2).to.equal(parseEther('20'));
+    });
+
     })
 
 

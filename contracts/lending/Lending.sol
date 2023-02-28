@@ -119,14 +119,14 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         // Amount borrowed
         uint256 amount;
         // Timestamp when the loan was created
-        uint256 loanUpdatedTimestamp;
+        uint256 accumulatedFeesTimestamp;
         address borrower;
         // Last time user claimed rewards
         uint256 lastRewardTimestamp;
         // Total rewards claimed
         uint256 totalRewardsClaimed;
         // Total fees accumulated
-        uint256 totalFees;
+        uint256 accumulatedFees;
     }
 
     mapping(address => mapping(address => Loan)) public loans; // user => collection => loan
@@ -255,24 +255,24 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
             // Reset the rewards
             _claimRewards(msg.sender, _collection);
 
-            // Calculate the total fees for the previous loan
-            uint256 totalFees = calculateLoanFeesSinceLastUpdated(
+            // Calculate the total fees for the previous loan amount until now, and accumulate them
+            uint256 totalFees = getUserLoanFees(
                 msg.sender,
                 _collection
             );
-            // Add the fees to the total fees
-            loans[msg.sender][_collection].totalFees = totalFees;
+            _updateLoanFees(msg.sender, _collection, totalFees);
+
+            // Update the loan amount
             loans[msg.sender][_collection].amount += _amount;
-            loans[msg.sender][_collection].loanUpdatedTimestamp = block
-                .timestamp;
+
         } else {
             // Add the loan to the user
             loans[msg.sender][_collection] = Loan({
                 amount: _amount,
                 lastRewardTimestamp: block.timestamp,
                 totalRewardsClaimed: 0,
-                totalFees: 0,
-                loanUpdatedTimestamp: block.timestamp,
+                accumulatedFees: 0,
+                accumulatedFeesTimestamp: block.timestamp,
                 borrower: msg.sender
             });
         }
@@ -282,7 +282,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
     }
 
     // function to calculate accumulated fees on a loan
-    function calculateLoanFeesSinceLastUpdated(
+    function getUserLoanFees(
         address _user,
         address _collection
     ) public view returns (uint256) {
@@ -294,12 +294,19 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
             return 0;
         }
 
-        // Calculate the fees
+        // Calculate the fees, this is the total accumulated + the fees for the time passed since the last update
         uint256 fees = (loan.amount *
-            collectionFeesAPY[_collection] *
-            (block.timestamp - loan.loanUpdatedTimestamp)) / (365 * 1 days);
+            (collectionFeesAPY[_collection] / 100)) *
+            (block.timestamp - loan.accumulatedFeesTimestamp) / (365 * 1 days);
 
-        return fees + loan.totalFees;
+        return fees + loan.accumulatedFees;
+    }
+
+    // Function to update loan fees for a user
+    function _updateLoanFees(address _user, address _collection, uint256 totalFees) internal {
+        // Update the loan
+        loans[_user][_collection].accumulatedFees = totalFees;
+        loans[_user][_collection].accumulatedFeesTimestamp = block.timestamp;
     }
 
     // Function to repay a loan partially or totally.
@@ -323,7 +330,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         );
 
         // Check that the amount is not greater than the loan amount + totalFees + new fees
-        uint256 totalFees = calculateLoanFeesSinceLastUpdated(
+        uint256 totalFees = getUserLoanFees(
             _user,
             _collection
         );
@@ -336,17 +343,14 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         // Transfer the magic to the contract
         magic.transferFrom(msg.sender, address(this), _amount);
 
-        // First update the loan with the totalFees and last updated timestap
-        loans[_user][_collection].totalFees = totalFees;
-        loans[_user][_collection].loanUpdatedTimestamp = block.timestamp;
-
         // Pay fees
         if (totalFees > 0) {
             if (_amount >= totalFees) {
                 _amount -= totalFees;
-                loans[_user][_collection].totalFees = 0;
+                _updateLoanFees(_user, _collection, 0);
+                
             } else {
-                loans[_user][_collection].totalFees -= _amount;
+                _updateLoanFees(_user, _collection, totalFees - _amount);
                 _amount = 0;
             }
         }
