@@ -118,8 +118,6 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
     struct Loan {
         // Amount borrowed
         uint256 amount;
-        // Timestamp when the loan was created
-        uint256 accumulatedFeesTimestamp;
         address borrower;
         // Last time user claimed rewards
         uint256 lastRewardTimestamp;
@@ -127,6 +125,8 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         uint256 totalRewardsClaimed;
         // Total fees accumulated
         uint256 accumulatedFees;
+        // Timestamp when the loan accumulated fees where last updated
+        uint256 accumulatedFeesTimestamp;
     }
 
     mapping(address => mapping(address => Loan)) public loans; // user => collection => loan
@@ -246,7 +246,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         );
 
         console.log("Contract transfer   %s tokens to %s", _amount, msg.sender);
-        
+
         // Transfer the amount to the user
         magic.transfer(msg.sender, _amount);
 
@@ -256,15 +256,11 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
             _claimRewards(msg.sender, _collection);
 
             // Calculate the total fees for the previous loan amount until now, and accumulate them
-            uint256 totalFees = getUserLoanFees(
-                msg.sender,
-                _collection
-            );
+            uint256 totalFees = getUserLoanFees(msg.sender, _collection);
             _updateLoanFees(msg.sender, _collection, totalFees);
 
             // Update the loan amount
             loans[msg.sender][_collection].amount += _amount;
-
         } else {
             // Add the loan to the user
             loans[msg.sender][_collection] = Loan({
@@ -282,28 +278,35 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
     }
 
     // function to calculate accumulated fees on a loan
-    function getUserLoanFees(
-        address _user,
-        address _collection
-    ) public view returns (uint256) {
+    function getUserLoanFees(address _user, address _collection)
+        public
+        view
+        returns (uint256)
+    {
         // Get the loan
         Loan memory loan = loans[_user][_collection];
-
         // If the loan is not active, return 0
         if (loan.amount == 0) {
             return 0;
         }
 
         // Calculate the fees, this is the total accumulated + the fees for the time passed since the last update
-        uint256 fees = (loan.amount *
-            (collectionFeesAPY[_collection] / 100)) *
-            (block.timestamp - loan.accumulatedFeesTimestamp) / (365 * 1 days);
+        uint256 _days = (block.timestamp - loan.accumulatedFeesTimestamp) /
+            1 days;
+
+        uint256 _yearFeeAmount = (loan.amount *
+            collectionFeesAPY[_collection]) / 100;
+        uint256 fees = (_yearFeeAmount * _days) / 365;
 
         return fees + loan.accumulatedFees;
     }
 
     // Function to update loan fees for a user
-    function _updateLoanFees(address _user, address _collection, uint256 totalFees) internal {
+    function _updateLoanFees(
+        address _user,
+        address _collection,
+        uint256 totalFees
+    ) internal {
         // Update the loan
         loans[_user][_collection].accumulatedFees = totalFees;
         loans[_user][_collection].accumulatedFeesTimestamp = block.timestamp;
@@ -330,10 +333,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         );
 
         // Check that the amount is not greater than the loan amount + totalFees + new fees
-        uint256 totalFees = getUserLoanFees(
-            _user,
-            _collection
-        );
+        uint256 totalFees = getUserLoanFees(_user, _collection);
 
         require(
             _amount <= loans[_user][_collection].amount + totalFees,
@@ -348,7 +348,6 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
             if (_amount >= totalFees) {
                 _amount -= totalFees;
                 _updateLoanFees(_user, _collection, 0);
-                
             } else {
                 _updateLoanFees(_user, _collection, totalFees - _amount);
                 _amount = 0;
@@ -387,11 +386,20 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
     }
 
     function _claimRewards(address _user, address _collection) internal {
-        // Rewards APY of the collection, divided by 365 and multiplied by the number of days since the last claim
-        uint256 rewards = (loans[_user][_collection].amount *
-            collectionRewardsAPY[_collection] *
-            (block.timestamp - loans[_user][_collection].lastRewardTimestamp)) /
-            (365 * 1 days);
+        // Calculate the rewards for the time passed since the last update
+        uint256 _days = (block.timestamp -
+            loans[_user][_collection].lastRewardTimestamp) / 1 days;
+
+        uint256 _yearFeeAmount = (loans[_user][_collection].amount *
+            collectionRewardsAPY[_collection]) / 100;
+        uint256 rewards = (_yearFeeAmount * _days) / 365;
+
+        console.log(
+            "Rewards for   %s days: %s, year fee amount %s",
+            _days,
+            rewards,
+            _yearFeeAmount
+        );
 
         // Update the last reward timestamp
         loans[_user][_collection].lastRewardTimestamp = block.timestamp;
