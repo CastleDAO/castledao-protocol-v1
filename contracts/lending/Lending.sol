@@ -27,7 +27,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
 
     struct Collection {
         bool active;
-        uint256 feesAPY;
+        uint256 feesAPR;
         uint256 maxLoanRatio;
         uint256 rewardsAPY;
         uint256 floorPrice;
@@ -42,7 +42,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
     // Function to add a new collection allowed to the staking contract
     function addCollection(
         address _collection,
-        uint256 _apy,
+        uint256 _feesAPR,
         uint256 _maxLoanRatio,
         uint256 _rewardsAPY,
         uint256 _floorPrice,
@@ -50,7 +50,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
     ) external onlyManager {
         allCollections.add(_collection);
         collections[_collection].active = true;
-        collections[_collection].feesAPY = _apy;
+        collections[_collection].feesAPR = _feesAPR;
         collections[_collection].maxLoanRatio = _maxLoanRatio;
         collections[_collection].rewardsAPY = _rewardsAPY;
         collections[_collection].floorPrice = _floorPrice;
@@ -58,12 +58,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
 
         // Emit event
         emit CollectionAdded(
-            _collection,
-            _apy,
-            _maxLoanRatio,
-            _rewardsAPY,
-            _floorPrice,
-            _liquidationRatio
+            collections[_collection]
         );
     }
 
@@ -89,14 +84,14 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
         emit RewardsAPYSet(_collection, _rewardsAPY);
     }
 
-    // Function to set the fees APY for a collection, only manager
-    function setfeesAPY(address _collection, uint256 _apy)
+    // Function to set the fees APR for a collection, only manager
+    function setFeesAPR(address _collection, uint256 _feesAPR)
         external
         onlyManager
     {
-        collections[_collection].feesAPY = _apy;
+        collections[_collection].feesAPR = _feesAPR;
         // Emit event
-        emit FeesAPYSet(_collection, _apy);
+        emit FeesAPRSet(_collection, _feesAPR);
     }
 
     // Function to set the max loan ratio for a collection, only manager
@@ -316,7 +311,7 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
             1 days;
 
         uint256 _yearFeeAmount = (loan.amount *
-            collections[_collection].feesAPY) / 100;
+            collections[_collection].feesAPR) / 100;
         uint256 fees = (_yearFeeAmount * _days) / 365;
 
         return fees + loan.accumulatedFees;
@@ -540,16 +535,14 @@ contract Lending is ManagerModifier, BaseStaker, Pausable {
     event RewardsClaimed(address indexed user, uint256 amount);
 
     event CollectionAdded(
-        address indexed collection,
-        uint256 apy,
-        uint256 maxLoanRatio
+        Collection collection
     );
 
     event CollectionRemoved(address indexed collection);
 
     event CollectionActiveSet(address indexed collection, bool active);
 
-    event FeesAPYSet(address indexed collection, uint256 apy);
+    event FeesAPRSet(address indexed collection, uint256 apr);
 
     event RewardsAPYSet(address indexed collection, uint256 rubyRewards);
 

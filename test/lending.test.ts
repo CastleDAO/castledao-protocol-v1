@@ -107,14 +107,14 @@ describe("Lending", function () {
   });
 
   it("Should allow the manager to add collection", async () => {
-    await lending.addCollection(nftERC721.address, 0, 10);
+    await lending.addCollection(nftERC721.address, 0, 10, 0, 1000, 70);
     expect(await lending.collectionsMaxLoanRatio(nftERC721.address)).to.equal(
       10
     );
   });
 
   it("Should allow the manager to set collection as active and unctive", async () => {
-    await lending.addCollection(nftERC721.address, 0, 10);
+    await lending.addCollection(nftERC721.address, 0, 10, 0, 1000, 70);
     await lending.setCollectionActive(nftERC721.address, true);
     expect(await lending.activeCollections(nftERC721.address)).to.equal(true);
 
@@ -123,32 +123,32 @@ describe("Lending", function () {
   });
 
   it("should allow the ORACLE to change the floor price of a collection", async () => {
-    await lending.addCollection(nftERC721.address, 0, 10);
+    await lending.addCollection(nftERC721.address, 0, 10, 0, 1000, 70);
     await lending
       .connect(oracleUser)
       .setCollectionFloorPrice(nftERC721.address, parseEther("10"));
-    expect(await lending.collectionsFloorPrice(nftERC721.address)).to.equal(
+    expect((await lending.collections(nftERC721.address)).floorPrice).to.equal(
       parseEther("10")
     );
   });
 
   it("Should not allow non oracle users to change the floor price of a collection", async () => {
-    await lending.addCollection(nftERC721.address, 0, 10);
+    await lending.addCollection(nftERC721.address, 0, 10, 0, 1000, 70);
     await expect(
       lending.setCollectionFloorPrice(nftERC721.address, parseEther("10"))
     ).to.be.revertedWith("Manager: Not oracle");
   });
 
   it("should allow the manager to set the max loan ratio of a collection", async () => {
-    await lending.addCollection(nftERC721.address, 0, 10);
+    await lending.addCollection(nftERC721.address, 0, 10, 0, 1000, 70);
     await lending.setCollectionMaxLoanRatio(nftERC721.address, 20);
-    expect(await lending.collectionsMaxLoanRatio(nftERC721.address)).to.equal(
+    expect((await lending.collections(nftERC721.address)).maxLoanRatio).to.equal(
       20
     );
   });
 
   it("Should not allow non manager users to set the max loan ratio of a collection", async () => {
-    await lending.addCollection(nftERC721.address, 0, 10);
+    await lending.addCollection(nftERC721.address, 0, 10, 0, 1000, 70);
     await expect(
       lending
         .connect(userWithNFT)
@@ -163,7 +163,7 @@ describe("Lending", function () {
   });
 
   it("should allow the user to add collateral of an allowed collection", async () => {
-    await lending.addCollection(nftERC721.address, 0, 10);
+    await lending.addCollection(nftERC721.address, 0, 10, 0, 1000, 70);
     await lending.setCollectionActive(nftERC721.address, true);
     // approve collection
     await nftERC721
@@ -182,7 +182,7 @@ describe("Lending", function () {
     beforeEach(async () => {
       // Max loan ratio 10%, if floor is 1000 and max loan ratio is 10% then max loan per item is 100
 
-      await lending.addCollection(nftERC721.address, 10, 10);
+      await lending.addCollection(nftERC721.address, 10, 10, 0, 1000, 70);
       await lending.setCollectionActive(nftERC721.address, true);
       // set floor price
       await lending
