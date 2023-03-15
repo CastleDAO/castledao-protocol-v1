@@ -1,17 +1,19 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "./BaseStakerUpgradeable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+import "./BaseStaker.sol";
 import "../interfaces/ITokenManager.sol";
 import "../ManagerModifier.sol";
 import "../interfaces/IRuby.sol";
 import "hardhat/console.sol";
 
-contract CastleDAOStaking is ManagerModifier, BaseStakerUpgradeable {
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.UintSet;
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+contract CastleDAOStaking is ManagerModifier, BaseStaker, ReentrancyGuard {
+    using EnumerableSet for EnumerableSet.UintSet;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     // Address of the Ruby contract
     IRuby public ruby;
@@ -37,10 +39,10 @@ contract CastleDAOStaking is ManagerModifier, BaseStakerUpgradeable {
     mapping(address => uint256) public collectionRewardsPerDay;
 
     // Array with the allowed collections
-    EnumerableSetUpgradeable.AddressSet private allowedCollectionsArray;
+    EnumerableSet.AddressSet private allowedCollectionsArray;
 
     // Mapping to hold the staked tokens for a user, per collection
-    mapping(address => mapping(address => EnumerableSetUpgradeable.UintSet))
+    mapping(address => mapping(address => EnumerableSet.UintSet))
         internal userToTokensStaked;
 
     // Function to set the rewards per day for a collection, only manager
@@ -173,7 +175,7 @@ contract CastleDAOStaking is ManagerModifier, BaseStakerUpgradeable {
     // IT allows to unstake a token and claim the rewards
     // Token can be unstaked even if the collection is not allowed anymore, but rewards are not distributed
     function _unstakeCastleDAONFT(address _collection, uint256 _tokenId)
-        internal
+        internal nonReentrant
     {
 
         if (allowedCollectionsArray.contains(_collection)) {
@@ -188,7 +190,7 @@ contract CastleDAOStaking is ManagerModifier, BaseStakerUpgradeable {
     }
 
     // Function to claim rewards for all the tokens staked by the user
-    function claimRewards() external {
+    function claimRewards() external nonReentrant {
         // Get the user's staked tokens and for each, claim the rewards
         // get the users tokens for each allowed collection and claim rewards
         for (uint256 i = 0; i < allowedCollectionsArray.length(); i++) {

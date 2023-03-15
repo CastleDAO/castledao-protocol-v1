@@ -108,7 +108,7 @@ describe("Lending", function () {
 
   it("Should allow the manager to add collection", async () => {
     await lending.addCollection(nftERC721.address, 0, 10, 0, 1000, 70);
-    expect(await lending.collectionsMaxLoanRatio(nftERC721.address)).to.equal(
+    expect((await lending.collections(nftERC721.address)).maxLoanRatio).to.equal(
       10
     );
   });
@@ -116,10 +116,10 @@ describe("Lending", function () {
   it("Should allow the manager to set collection as active and unctive", async () => {
     await lending.addCollection(nftERC721.address, 0, 10, 0, 1000, 70);
     await lending.setCollectionActive(nftERC721.address, true);
-    expect(await lending.activeCollections(nftERC721.address)).to.equal(true);
+    expect((await lending.collections(nftERC721.address)).active).to.equal(true);
 
     await lending.setCollectionActive(nftERC721.address, false);
-    expect(await lending.activeCollections(nftERC721.address)).to.equal(false);
+    expect((await lending.collections(nftERC721.address)).active).to.equal(false);
   });
 
   it("should allow the ORACLE to change the floor price of a collection", async () => {
