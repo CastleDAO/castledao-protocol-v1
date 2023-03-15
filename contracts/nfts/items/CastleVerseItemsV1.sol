@@ -20,7 +20,7 @@ contract CastleVerseItems is ERC1155Upgradeable, ManagerModifierUpgradeable {
         bool isRestricted; // True if only manager can mint
     }
 
-    mapping(uint256 => Item) private _items;
+    mapping(uint256 => Item) public items;
 
     function initialize(
         string memory uri,
@@ -29,7 +29,7 @@ contract CastleVerseItems is ERC1155Upgradeable, ManagerModifierUpgradeable {
         address magicTokenAddress,
         address rubyTokenAddress
     ) public initializer  {
-        __ERC1155_init(uri);
+        ERC1155Upgradeable.__ERC1155_init(uri);
         initializeManagerModifier(manager);
         _metadataContract = INFTMetadata(metadataContractAddress);
         magicToken = IERC20Upgradeable(magicTokenAddress);
@@ -50,7 +50,7 @@ contract CastleVerseItems is ERC1155Upgradeable, ManagerModifierUpgradeable {
         external
         onlyManager
     {
-        _items[itemId] = Item(priceRuby, priceMagic, isMagicAllowed, (priceRuby == 0) && (priceMagic == 0), isRestricted);
+        items[itemId] = Item(priceRuby, priceMagic, isMagicAllowed, (priceRuby == 0) && (priceMagic == 0), isRestricted);
     }
 
     function modifyItem(
@@ -63,22 +63,22 @@ contract CastleVerseItems is ERC1155Upgradeable, ManagerModifierUpgradeable {
         external
         onlyManager
     {
-        _items[itemId].priceRuby = newPriceRuby;
-        _items[itemId].priceMagic = newPriceMagic;
-        _items[itemId].isMagicAllowed = newIsMagicAllowed;
-        _items[itemId].isFree = (newPriceRuby == 0) && (newPriceMagic == 0);
-        _items[itemId].isRestricted = newIsRestricted;
+        items[itemId].priceRuby = newPriceRuby;
+        items[itemId].priceMagic = newPriceMagic;
+        items[itemId].isMagicAllowed = newIsMagicAllowed;
+        items[itemId].isFree = (newPriceRuby == 0) && (newPriceMagic == 0);
+        items[itemId].isRestricted = newIsRestricted;
     }
 
     function mintItem(uint256 itemId, uint256 amount,  bytes memory data) external {
-        require(!_items[itemId].isRestricted, "Item is restricted");
-        require(_items[itemId].isFree, "Item is not free to mint");
+        require(!items[itemId].isRestricted, "Item is restricted");
+        require(items[itemId].isFree, "Item is not free to mint");
 
         _mint(msg.sender, itemId, amount, data);
     }
 
     function purchaseItem(uint256 itemId, uint256 amount, bool useMagic, bytes memory data) external {
-        Item memory item = _items[itemId];
+        Item memory item = items[itemId];
         require(!item.isFree, "Item is free to mint, use mintItem function");
         require(item.isMagicAllowed || !useMagic, "MAGIC payment is not allowed for this item");
 
@@ -93,11 +93,11 @@ contract CastleVerseItems is ERC1155Upgradeable, ManagerModifierUpgradeable {
         _mint(msg.sender, itemId, amount, data);
     }
 
-    function managerMint(address account, uint256 id, uint256 amount, bytes memory data) public onlyManager {
+    function managerMint(address account, uint256 id, uint256 amount, bytes memory data) public onlyMinter {
         _mint(account, id, amount, data);
     }
 
-    function managerMintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public onlyManager {
+    function managerMintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public onlyMinter {
         _mintBatch(to, ids, amounts, data);
     }
 
