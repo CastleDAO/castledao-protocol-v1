@@ -23,13 +23,12 @@ contract CastleVerseItems is ERC1155Upgradeable, ManagerModifierUpgradeable {
     mapping(uint256 => Item) public items;
 
     function initialize(
-        string memory uri,
         address manager,
         address metadataContractAddress,
         address magicTokenAddress,
         address rubyTokenAddress
     ) public initializer  {
-        ERC1155Upgradeable.__ERC1155_init(uri);
+        ERC1155Upgradeable.__ERC1155_init("");
         initializeManagerModifier(manager);
         _metadataContract = INFTMetadata(metadataContractAddress);
         magicToken = IERC20Upgradeable(magicTokenAddress);

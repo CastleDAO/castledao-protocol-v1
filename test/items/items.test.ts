@@ -1,10 +1,8 @@
 // Tests for the castledao staking contract
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Contract } from "ethers";
-import { parseEther } from "ethers/lib/utils";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 // Contracts used in the tests
 let castleVerseItems: Contract;
@@ -54,7 +52,6 @@ describe("Items", function () {
         // Deploy the CastleVerseItems contract
         const CastleVerseItems = await ethers.getContractFactory("CastleVerseItems");
         castleVerseItems = await upgrades.deployProxy(CastleVerseItems, [
-            "https://example.com/items/",
             manager.address,
             metadataContract.address,
             magicToken.address,
@@ -156,5 +153,10 @@ describe("Items", function () {
         await castleVerseItems.connect(user1).burnBatch(user1address, [1, 2], [1, 1]);
         expect(await castleVerseItems.balanceOf(user1address, 1)).to.equal(0);
         expect(await castleVerseItems.balanceOf(user1address, 2)).to.equal(0);
+    });
+
+    it('should return the right token uri', async () => {
+        await castleVerseItems.addItem(1, 100, 1000, true, false);
+        expect(await castleVerseItems.uri(1)).to.equal("https://example.com/metadata/1.json");
     });
 });
