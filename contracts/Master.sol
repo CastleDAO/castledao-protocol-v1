@@ -57,7 +57,7 @@ contract Master is ManagerModifier {
     
     // Castle contract functions
 
-    function mintCastles(address _to, string[] memory _ids, uint256 _tokenId) external onlyMinter {
+    function mintCastles(address _to, uint256[] memory _ids, uint256 _tokenId) external onlyMinter {
         require(castlePrices.ETH != 0, "Invalid token prices");
         for (uint256 i = 0; i < _ids.length; i++) {
             castleContract.ownerClaim(_ids[0]);
@@ -66,7 +66,7 @@ contract Master is ManagerModifier {
     }
 
     // Function to transfer a castle to a new owner from this contract
-    function transferCastle(address _to, string memory _id) external onlyManager {
+    function transferCastle(address _to, uint256 _id) external onlyManager {
         castleContract.safeTransferFrom(address(this), _to, _id);
     }
 
