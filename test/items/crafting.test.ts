@@ -59,10 +59,10 @@ describe("CastleVerseCrafting", function () {
 
         user1address = await user1.getAddress();
         // Deploy the CastleVerseCrafting contract
-        const CastleVerseCrafting = await ethers.getContractFactory("CastleVerseCrafting");
+        const CastleVerseCrafting = await ethers.getContractFactory("Crafting");
         castleVerseCrafting = await upgrades.deployProxy(CastleVerseCrafting, [
-            castleVerseItems.address,
             manager.address,
+            castleVerseItems.address,
             magicToken.address,
             rubyToken.address,
         ]);
@@ -78,24 +78,42 @@ describe("CastleVerseCrafting", function () {
         await castleVerseItems.addItem(3, 100, 1000, true, true);
         await castleVerseItems.addItem(4, 100, 1000, true, true);
 
+        // Add the minter role to the crafitng contract
+        await manager.addManager(await castleVerseCrafting.address, 1);
+
 
     });
 
     it("Should allow the manager to add a recipe", async () => {
         await castleVerseCrafting.addRecipe(1, [2, 3], [1, 1], 500, 1000, 43, 100);
         const recipe = await castleVerseCrafting.recipes(1);
-        expect(recipe.outputItem).to.equal(3);
-        expect(recipe.inputItems).to.deep.equal([2, 3]);
-        expect(recipe.inputAmounts).to.deep.equal([1, 1]);
+
+        const recipeInputItemsLength = await castleVerseCrafting.getRecipeInputItemsLength(1);
+        const recipeInputAmountsLength = await castleVerseCrafting.getRecipeInputAmountsLength(1);
+
+        let recipeInputItems = [];
+        let recipeInputAmounts = [];
+
+        for (let i = 0; i < recipeInputItemsLength; i++) {
+            recipeInputItems.push(await castleVerseCrafting.getRecipeInputItem(1, i));
+        }
+
+
+        for (let i = 0; i < recipeInputAmountsLength; i++) {
+            recipeInputAmounts.push(await castleVerseCrafting.getRecipeInputAmount(1, i));
+        }
+
+        expect(recipeInputItems).to.deep.equal([2, 3]);
+        expect(recipeInputAmounts).to.deep.equal([1, 1]);
         expect(recipe.magicCost).to.equal(500);
         expect(recipe.rubyCost).to.equal(1000);
-        expect(recipe.outputItem).to.equal(4);
+        expect(recipe.outputItem).to.equal(43);
         expect(recipe.successChance).to.equal(100);
     });
 
     it("Should allow users to craft an item", async () => {
         await castleVerseCrafting.addRecipe(1, [2, 3], [1, 1], 500, 1000, 4, 100);
-
+        console.log('added recipe')
         // Mint necessary input items and tokens to user1
         await castleVerseItems.managerMintBatch(user1address, [1, 2, 3], [1, 1, 1], "0x");
         await magicToken.mint(500, user1address);
@@ -104,6 +122,8 @@ describe("CastleVerseCrafting", function () {
         // Approve tokens for crafting contract
         await magicToken.connect(user1).approve(castleVerseCrafting.address, 500);
         await rubyToken.connect(user1).approve(castleVerseCrafting.address, 1000);
+        // Approve items for crafting contract
+        await castleVerseItems.connect(user1).setApprovalForAll(castleVerseCrafting.address, true);
 
         await castleVerseCrafting.connect(user1).craft(1);
 
