@@ -136,4 +136,24 @@ describe("CastleVerseCrafting", function () {
         expect(await rubyToken.balanceOf(user1address)).to.equal(0);
     });
 
+    // TODO: Add tests for failure cases
+    /* 
+    Test crafting with a recipe that has a 0% success chance. The crafting function should not mint an item in this case.
+
+    Test crafting with a recipe that has a 100% success chance. The crafting function should always mint an item in this case.
+
+    Test crafting when the contract is paused. The crafting function should revert.
+
+    Test withdrawing MAGIC and RUBY tokens by someone other than the manager. This should revert.
+
+    Test addRecipe when input items and input amounts have different lengths. This should revert.
+
+    Test craft when the user does not have enough input items. This should revert.
+
+    Test craft when the user does not have enough MAGIC and/or RUBY tokens. This should revert.
+
+    Test the edge case where block.timestamp is the same for multiple crafts (e.g., by using a custom testing function that allows setting the block.timestamp). Ensure the random number generation does not produce the same result.
+
+*/
+
 });

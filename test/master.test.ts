@@ -154,4 +154,23 @@ describe("Master contract", function () {
         // Check that the owner of castleContract is the original owner again
         expect(await castleContract.owner()).to.equal(await owner.getAddress());
     });
+
+    it("should revert if a non-manager tries to set prices for castles and generals", async () => {
+        await expect(master.connect(user).setCastlePriceETH(parseEther("1"))).to.be.revertedWith("Manager: Not manager");
+        await expect(master.connect(user).setGeneralPriceETH(parseEther("1"))).to.be.revertedWith("Manager: Not manager");
+    });
+    
+    it("should revert if a non-manager tries to perform privileged minting for castles and generals", async () => {
+        await expect(master.connect(user).privilegedMintCastles(await user.getAddress(), [1])).to.be.revertedWith("Manager: Not minter");
+        await expect(master.connect(user).privilegedMintGenerals(await user.getAddress(), 1)).to.be.revertedWith("Manager: Not minter");
+    });
+    
+    it("should revert if a non-manager tries to withdraw tokens", async () => {
+        await expect(master.connect(user).withdrawTokens(magicContract.address, parseEther("100"))).to.be.revertedWith("Manager: Not manager");
+    });
+    
+    it("should revert if a non-manager tries to transfer contract ownership", async () => {
+        await expect(master.connect(user).transferContractOwnership(await user.getAddress())).to.be.revertedWith("Manager: Not an Admin");
+    });
+    
 });
