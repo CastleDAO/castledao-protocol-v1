@@ -15,20 +15,26 @@ async function main() {
   console.log("Manager contract deployed to:", manager.address);
 
   // Add managers
-  const manager1Address = "0x123..."; // Replace with the desired address
-  const manager1Type = 1; // Replace with the desired manager type
-
-  const manager2Address = "0x456..."; // Replace with the desired address
-  const manager2Type = 2; // Replace with the desired manager type
-
-  await manager.addManager(manager1Address, manager1Type);
-  console.log(`Added manager ${manager1Address} with type ${manager1Type}`);
-
-  await manager.addManager(manager2Address, manager2Type);
-  console.log(`Added manager ${manager2Address} with type ${manager2Type}`);
+  const manager1Address = "0xd6ecFf5F50c1A7e27C2e0422C76817FD21c44b2D"; // Replace with the desired address
 
 
-  if(networkName != "localhost") {
+  await manager.addManager(manager1Address, 1);
+  console.log(`Added manager ${manager1Address} with type 1`);
+
+  await manager.addManager(manager1Address, 2);
+  console.log(`Added manager ${manager1Address} with type 2`);
+
+  await manager.addManager(manager1Address, 3);
+  console.log(`Added manager ${manager1Address} with type3`);
+
+  await manager.addManager(manager1Address, 4);
+  console.log(`Added manager ${manager1Address} with type 4`);
+
+  await manager.addManager(manager1Address, 5);
+  console.log(`Added manager ${manager1Address} with type 5`);
+
+
+  if (networkName != "localhost") {
     console.log("");
     console.log("To verify this contract on Etherscan, try:");
     console.log(`npx hardhat verify --network ${networkName} ${manager.address}`);

@@ -23,8 +23,6 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
-const PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY as string;
-
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.17",
@@ -41,11 +39,11 @@ const config: HardhatUserConfig = {
     },
     arbitrumgoerli: {
       url: `https://arb-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      accounts: [PRIVATE_KEY],
+      accounts: [ process.env.WALLET_PRIVATE_KEY_TESTNET as string],
     },
     arbitrummainnet: {
       url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      accounts: [PRIVATE_KEY],
+      accounts: [ process.env.WALLET_PRIVATE_KEY_MAINNET as string],
     },
   },
   gasReporter: {

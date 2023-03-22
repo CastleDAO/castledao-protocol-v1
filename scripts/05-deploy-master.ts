@@ -1,13 +1,14 @@
 // Deploys the master contracts and transfers ownership of the generals and castle contracts to the master contract.
 import { ethers } from "hardhat";
+import { deployed_contracts } from "./constants";
 
 async function main() {
     const [deployer] = await ethers.getSigners();
   
     // Assume the contracts are already deployed and you have their addresses
-    const generalsContractAddress = "PUT_GENERALS_CONTRACT_ADDRESS_HERE";
-    const castleContractAddress = "PUT_CASTLE_CONTRACT_ADDRESS_HERE";
-    const managerContractAddress = "PUT_MANAGER_CONTRACT_ADDRESS_HERE";
+    const generalsContractAddress = deployed_contracts.arbitrumgoerli.generals;
+    const castleContractAddress = deployed_contracts.arbitrumgoerli.castles;
+    const managerContractAddress = deployed_contracts.arbitrumgoerli.manager;
   
     // Interact with the deployed Generals contract
     const CryptoGenerals = await ethers.getContractFactory("CryptoGenerals");
@@ -51,7 +52,7 @@ async function main() {
       console.log("");
       console.log("To verify these contracts on Etherscan, try:");
       console.log(
-        `npx hardhat verify --network ${networkName} ${master.address}`
+        `npx hardhat verify --network ${networkName} ${master.address} ${manager.address} ${generalsContract.address} ${castleContract.address}`
       );
     }
   }

@@ -11,11 +11,29 @@ REPORT_GAS=true npx hardhat test
 npx hardhat node
 npx hardhat run scripts/deploy.ts
 ```
+## Deploy on testnet:
+
+```shell
+npx hardhat run scripts/00-deploy-castles.ts --network arbitrumgoerli
+npx hardhat run scripts/01-deploy-defiheroes.ts --network arbitrumgoerli
+npx hardhat run scripts/02-deploy-generals.ts --network arbitrumgoerli
+npx hardhat run scripts/03-deploy-ballot.ts --network arbitrumgoerli
+
+```
+
+Then set the appropiate values under the "constants" file. (scripts/constants.ts).
+
+Proceed to deploy the manager and the master
+
+```shell
+npx hardhat run scripts/04-deploy-manager.ts --network arbitrumgoerli
+npx hardhat run scripts/05-deploy-master.ts --network arbitrumgoerli
+```
 
 ## Hardhat verify
 
 ```shell
-npx hardhat verify --network ropsten DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
+npx hardhat verify --network arbitrumgoerli DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
 ```
 
 ## TODO List
