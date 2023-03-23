@@ -4,12 +4,14 @@ import { deployed_contracts } from "./constants";
 
 async function main() {
     const [deployer] = await ethers.getSigners();
-  
+
+    const network = await ethers.provider.getNetwork();
+
     // Assume the contracts are already deployed and you have their addresses
-    const castleContractAddress = deployed_contracts.arbitrumgoerli.castles;
-    const managerContractAddress = deployed_contracts.arbitrumgoerli.manager;
-  
-  
+    const castleContractAddress = network.chainId === 42161 ? deployed_contracts.mainnet.castles : deployed_contracts.arbitrumgoerli.castles;
+    const managerContractAddress = network.chainId === 42161 ? deployed_contracts.mainnet.manager : deployed_contracts.arbitrumgoerli.manager;
+    const magicContractAddress = network.chainId === 42161 ? deployed_contracts.mainnet.magic : deployed_contracts.arbitrumgoerli.magic;
+
     // Interact with the deployed Castle contract
     const CastlesArbi = await hre.ethers.getContractFactory("CastlesArbi");
     const castleContract = await CastlesArbi.attach(castleContractAddress);
@@ -28,13 +30,19 @@ async function main() {
     );
     await master.deployed();
     console.log("Master contract deployed to:", master.address);
-  
+      
+    // Set the price in ETH for minting castles at master
+    await master.setCastlePriceETH(ethers.utils.parseEther("0.05"));
+    console.log("Master contract price set to 0.05 ETH");
+
+    // Set the price in MAGIC for minting castles at master
+    await master.setCastlePrices(magicContractAddress, ethers.utils.parseEther("50"));
+    console.log("Master contract price set to 50 MAGIC");
 
     // Transfer ownership of the Castle contract to the Master contract
     await castleContract.transferOwnership(master.address);
     console.log("Castle contract ownership transferred to Master");
   
-    const network = await ethers.provider.getNetwork();
     const networkName = (network.name == 'unknown' ? 'localhost' : network.name);
   
     console.log(`Network: ${networkName} (chainId=${network.chainId})`);
@@ -43,7 +51,7 @@ async function main() {
       console.log("");
       console.log("To verify these contracts on Etherscan, try:");
       console.log(
-        `npx hardhat verify --network ${networkName} ${master.address} ${manager.address} ${generalsContract.address} ${castleContract.address}`
+        `npx hardhat verify --network ${networkName} ${master.address} ${manager.address} ${castleContract.address}`
       );
     }
   }

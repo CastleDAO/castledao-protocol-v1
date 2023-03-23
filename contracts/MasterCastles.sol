@@ -17,6 +17,9 @@ contract MasterCastles is ManagerModifier, ReentrancyGuard, IERC721Receiver {
     // Prices store the address of the token and the price
     mapping(address => uint256) public castlePrices;
     uint256 public castlePriceETH;
+
+    // store token balances
+    mapping(address => uint256) public tokenBalances;
     
 
     constructor(address _manager, address _castlesContract) ManagerModifier(_manager) {
@@ -49,6 +52,9 @@ contract MasterCastles is ManagerModifier, ReentrancyGuard, IERC721Receiver {
 
         // Transfer the token to this contract
         IERC20(_token).transferFrom(msg.sender, address(this), castlePrices[_token].mul(_ids.length));
+
+        // Increase token balances
+        tokenBalances[_token] = tokenBalances[_token].add(castlePrices[_token].mul(_ids.length));
 
         _mintCastles(msg.sender, _ids);
     }
@@ -105,6 +111,8 @@ contract MasterCastles is ManagerModifier, ReentrancyGuard, IERC721Receiver {
         onlyManager
     {
         IERC20(token).transfer(msg.sender, amount);
+
+        tokenBalances[token] = tokenBalances[token].sub(amount);
     }
 
     // IERC721Receiver implementation

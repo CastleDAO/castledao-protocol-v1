@@ -17,6 +17,8 @@ async function main() {
   // Add managers
   const manager1Address = "0xd6ecFf5F50c1A7e27C2e0422C76817FD21c44b2D"; // Replace with the desired address
 
+  await manager.addManager(manager1Address, 0);
+  console.log(`Added manager ${manager1Address} with type 0`);
 
   await manager.addManager(manager1Address, 1);
   console.log(`Added manager ${manager1Address} with type 1`);

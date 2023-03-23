@@ -13,6 +13,14 @@ npx hardhat run scripts/deploy.ts
 ```
 ## Deploy on testnet:
 
+Optional: Deploy mock token contracts
+```shell
+npx hardhat run scripts/demoTokens/deploy-mock-magic.ts --network arbitrumgoerli
+npx hardhat run scripts/demoTokens/mint-magic-tokens.ts --network arbitrumgoerli
+```
+
+Deploy the NFTS
+
 ```shell
 npx hardhat run scripts/00-deploy-castles.ts --network arbitrumgoerli
 npx hardhat run scripts/01-deploy-defiheroes.ts --network arbitrumgoerli
@@ -27,7 +35,7 @@ Proceed to deploy the manager and the master
 
 ```shell
 npx hardhat run scripts/04-deploy-manager.ts --network arbitrumgoerli
-npx hardhat run scripts/05-deploy-master.ts --network arbitrumgoerli
+npx hardhat run scripts/05-deploy-master-castles.ts --network arbitrumgoerli
 ```
 
 ## Hardhat verify
