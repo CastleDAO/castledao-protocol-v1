@@ -9,7 +9,6 @@ describe("Master contract", function () {
     let user: Signer;
     let otherUser: Signer;
     let magicSigner: Signer;
-    let generalsContract: Contract;
     let castleContract: Contract;
     let magicContract: Contract;
 
@@ -17,11 +16,8 @@ describe("Master contract", function () {
     beforeEach(async function () {
         [owner, user, otherUser, magicSigner] = await ethers.getSigners();
 
-        // Deploy the Generals and Castle contracts
-        const CryptoGenerals = await ethers.getContractFactory("CryptoGenerals");
-        generalsContract = await CryptoGenerals.deploy();
-        await generalsContract.deployed();
 
+        // Deploy the castles contracts
         const CastleNFT = await ethers.getContractFactory("CastlesArbi");
         castleContract = await CastleNFT.deploy();
         await castleContract.deployed();
@@ -37,8 +33,8 @@ describe("Master contract", function () {
         magicContract = await testERC20.deployed();
 
         // Deploy the Master contract
-        const Master = await ethers.getContractFactory("Master");
-        master = await Master.deploy(managerInstance.address, generalsContract.address, castleContract.address);
+        const Master = await ethers.getContractFactory("MasterCastles");
+        master = await Master.deploy(managerInstance.address, castleContract.address);
         await master.deployed();
 
         // Add owner as admin and manager in the Manager contract
@@ -56,40 +52,33 @@ describe("Master contract", function () {
         // Transfer ownership of castleContract to master contract
         await castleContract.connect(owner).transferOwnership(master.address);
 
-        // Transfer ownership of castleContract to master contract
-        await generalsContract.connect(owner).transferOwnership(master.address);
+
     });
 
-    it('should allow to set the price in eth for a castle, and for a general', async () => {
+    it('should allow to set the price in eth for a castle', async () => {
         // Set the price in eth for a castle
         await master.connect(owner).setCastlePriceETH(parseEther("1"));
 
-        // Set the price in eth for a general
-        await master.connect(owner).setGeneralPriceETH(parseEther("1"));
+      
 
         // Check that the price in eth for a castle is 1 eth
         expect(await master.castlePriceETH()).to.equal(parseEther("1"));
 
-        // Check that the price in eth for a general is 1 eth
-        expect(await master.generalPriceETH()).to.equal(parseEther("1"));
+
     })
 
-    it('should allow to set the price for a castle in magic, and for a general in magic', async () => {
+    it('should allow to set the price for a castle in magic', async () => {
         // Set the price for magic for a castle
         await master.connect(owner).setCastlePrices(magicContract.address, parseEther("100"));
 
-        // Set the price for magic for a general
-        await master.connect(owner).setGeneralPrices(magicContract.address, parseEther("100"));
+
 
         // Check that the price for magic for a castle is 100 magic
         expect(await master.castlePrices(magicContract.address)).to.equal(parseEther("100"));
 
-        // Check that the price for magic for a general is 100 magic
-
-        expect(await master.generalPrices(magicContract.address)).to.equal(parseEther("100"));
     })
 
-    it('should allow the owner to mint for free a castle and a general', async () => {
+    it('should allow the owner to mint for free a castle ', async () => {
         // Mint a castle for free
         const tokenId = 1;
 
@@ -98,11 +87,7 @@ describe("Master contract", function () {
         // Check that the castle was minted to the owner
         expect(await castleContract.ownerOf(tokenId)).to.equal(await owner.getAddress());
 
-        // Mint a general for free
-        await master.connect(owner).privilegedMintGenerals(await owner.getAddress(), 1);
-
-        // Check that the general was minted to the owner
-        expect(await generalsContract.ownerOf(1)).to.equal(await owner.getAddress());
+ 
     })
 
     it("should transfer ownership, mint, withdraw tokens, and transfer ownership back", async function () {
@@ -155,14 +140,42 @@ describe("Master contract", function () {
         expect(await castleContract.owner()).to.equal(await owner.getAddress());
     });
 
+    it('returns the eth to the owner after callign ownerWithdraw', async () => {
+
+        // Log the initial balance of the owner
+        console.log("Initial balance of owner: ", await owner.getBalance());
+        const prevBalance = await owner.getBalance();
+        // Set the price in eth for a castle
+        await master.connect(owner).setCastlePriceETH(ethers.utils.parseEther("1"));
+
+        // Mint a castle using the master contract
+        const tokenId = 1;
+        await master.connect(owner).mintCastlesETH([tokenId], { value: ethers.utils.parseEther("1") });
+
+        // Check that the castle was minted to the owner
+
+        expect(await castleContract.ownerOf(tokenId)).to.equal(await owner.getAddress());
+
+        console.log('We are about to call ownerWithdraw')
+
+        // Call the ownerWithdraw function
+        await master.connect(owner).ownerWithdraw();
+
+        // Log the new balance of the owner
+        console.log("New balance of owner: ", await owner.getBalance());
+        const newBalance = await owner.getBalance();
+
+        // Check that the difference between balances is less than 1 eth
+        expect(newBalance.sub(prevBalance)).to.be.lt(ethers.utils.parseEther("1"));
+
+    })
+
     it("should revert if a non-manager tries to set prices for castles and generals", async () => {
         await expect(master.connect(user).setCastlePriceETH(parseEther("1"))).to.be.revertedWith("Manager: Not manager");
-        await expect(master.connect(user).setGeneralPriceETH(parseEther("1"))).to.be.revertedWith("Manager: Not manager");
     });
     
     it("should revert if a non-manager tries to perform privileged minting for castles and generals", async () => {
         await expect(master.connect(user).privilegedMintCastles(await user.getAddress(), [1])).to.be.revertedWith("Manager: Not minter");
-        await expect(master.connect(user).privilegedMintGenerals(await user.getAddress(), 1)).to.be.revertedWith("Manager: Not minter");
     });
     
     it("should revert if a non-manager tries to withdraw tokens", async () => {
