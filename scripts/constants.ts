@@ -14,6 +14,7 @@ export const deployed_contracts = {
         ballot: '0xA86F02D8854e6c1dB41eB3308138D0473250CAF5',
         manager: '0xb41a1D1fCff8b00d1342881561BFa3Edb495f748',
         masterCastles: '0x474D5fBafda609670fBe96D92dcd90Ec5F02b9B4',
+        generalsAmulet: '0x5CFCA09928afC89be9c118E35b81c78E9443D4b8',
 
         // Other
         magic: '0x2D110bF8fd17b514CbdCa025a97AAeb5E463AF4E',
@@ -31,6 +32,7 @@ export const deployed_contracts = {
         defiheroes: '0x8ec75bc963181489d7fc1d892f687b8b0987d9ec',
         manager: '0x8937fF68da18e97B58109b598a6f0EbbF82DA3E2',
         masterCastles: '0xfc7590e2d9226327FF9D517F2D3653C05b7f625E',
+        generalsAmulet: '0x1DF62622F2FA840eD0708a52B67b89f48bAD806b',
 
         // Other
         magic: '0x539bde0d7dbd336b79148aa742883198bbf60342',

@@ -31,11 +31,24 @@ npx hardhat run scripts/03-deploy-ballot.ts --network arbitrumgoerli
 
 Then set the appropiate values under the "constants" file. (scripts/constants.ts).
 
-Proceed to deploy the manager and the master
+### Manager - In charge of role management for the protocol
 
 ```shell
 npx hardhat run scripts/04-deploy-manager.ts --network arbitrumgoerli
+```
+
+### Master contract - Allows to mint castles with other tokens
+
+Proceed to deploy the manager and the master
+
+```shell
 npx hardhat run scripts/05-deploy-master-castles.ts --network arbitrumgoerli
+```
+
+### Generals amulet - Stakes ballots and allows generals to have a special amulet
+
+```shell
+npx hardhat run scripts/06-deploy-generals-amulet.ts --network arbitrumgoerli
 ```
 
 ## Hardhat verify
