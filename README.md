@@ -57,6 +57,14 @@ npx hardhat run scripts/06-deploy-generals-amulet.ts --network arbitrumgoerli
 npx hardhat verify --network arbitrumgoerli DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
 ```
 
+## Deploy competitions
+
+```shell
+npx hardhat run scripts/competitions/00-deploy-competitions.ts --network arbitrumgoerli
+npx hardhat run scripts/competitions/01-create-competition.ts --network arbitrumgoerli
+```
+
+
 ## TODO List
 
 - [ ] Create a bound (bound manager) ERC155Upgradeable contract for the secret keys. Give one secret key to everyone who stakes for 100 days a castle. 

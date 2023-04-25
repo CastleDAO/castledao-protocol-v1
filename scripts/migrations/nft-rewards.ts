@@ -30,7 +30,7 @@ const ERC721_ABI = [
     for (const [winner, amount] of Object.entries(REWARDS)) {
       for (let i = 0; i < amount; i++) {
         await erc721Contract.ownerClaim();
-        console.log(`Claimed CryptoGeneral for ${winner}`   )
+        console.log(`Claimed CryptoGeneralº for ${winner}`   )
         const tokenId = await erc721Contract.totalSupply();
         await erc721Contract.transferFrom(deployer.address, winner, tokenId);
         console.log(`Sent CryptoGeneral tokenId ${tokenId} to ${winner}`);
