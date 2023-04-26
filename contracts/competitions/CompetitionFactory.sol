@@ -175,6 +175,18 @@ contract Competition {
         emit Joined(msg.sender, block.timestamp);
     }
 
+    function invite(address player) external {
+        // Require owner to invite
+        require(msg.sender == owner, "Not authorized");
+        require(block.timestamp < endDate, "Competition ended");
+        require(!hasJoined[player], "Already joined");
+
+        participants.push(Participant(player, block.timestamp));
+        hasJoined[player] = true;
+
+        emit Joined(player, block.timestamp);
+    }
+
     function setWinners(
         address[] calldata _winners,
         uint256[] calldata rewardDistributionPercentages
@@ -286,5 +298,11 @@ contract Competition {
             ? (balance * percentageForTreasury) / 100
             : 0;
         return balance - ownerAmount - treasuryAmount;
+    }
+
+
+    // Returns the number of players that joined
+    function getParticipantsCount() external view returns (uint256) {
+        return participants.length;
     }
 }

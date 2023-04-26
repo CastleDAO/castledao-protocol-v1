@@ -214,6 +214,10 @@ describe("CompetitionFactory and Competition", function () {
 
         await competition.connect(user).join();
 
+        // Count the number of participants
+        const participantsCount = await competition.getParticipantsCount();
+        expect(participantsCount).to.equal(1);
+
         await expect(
             competition.connect(user).join()
         ).to.be.revertedWith("Already joined");
@@ -271,8 +275,8 @@ describe("CompetitionFactory and Competition", function () {
         const treasuryBalanceBefore = await testERC20.balanceOf(await treasury.getAddress());
         const userBalanceBefore = await testERC20.balanceOf(await user.getAddress());
 
-             // Time travel 2 days
-             await time.increase(time.duration.days(2));
+        // Time travel 2 days
+        await time.increase(time.duration.days(2));
 
         // set the winners
         await competition.connect(restrictedUser).setWinners([await user.getAddress()], [100]);

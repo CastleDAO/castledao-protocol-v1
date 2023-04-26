@@ -32,7 +32,7 @@ function getMonthInfo() {
 async function main() {
     const network = await ethers.provider.getNetwork();
     // Deploy the Manager contract
-    const competitionFactoryAddress =  network.chainId === 42161 ?  "0x74AE54e25d63A984886Bb631d6fE1FA50Bd5EfF8": '0x8B9dD854D7e65DaF4E6B1622d1C8D0BeAf45BDD1';
+    const competitionFactoryAddress =  network.chainId === 42161 ?  "0x63003d20B84176067Dc0b67988178E69A80CfF22": '0x8B9dD854D7e65DaF4E6B1622d1C8D0BeAf45BDD1';
     const restrictedAddress = '0x846FF49d72F4e3CA7a3D318820C6C2debe23c68A';
     const treasuryAddress = '0xeEfC874aC40BCF8A00b4484F26F599d0CE6c0F47';
     const CompetitionFactory = await ethers.getContractFactory("CompetitionFactory");
