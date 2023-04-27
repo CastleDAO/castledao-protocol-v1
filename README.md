@@ -72,3 +72,5 @@ npx hardhat run scripts/competitions/01-create-competition.ts --network arbitrum
 - [ ] Make a contract to upgrade the generals with some special item obtained by staking a general for some time. 
 - [ ] Make the inventory expandable with RUBY purchases
 - [ ] Allow the use of treasure / smol treasures to purchase items, by burning them
+
+- Items: https://tokenbound.org/ use ERC 6551 for creating backpacks
