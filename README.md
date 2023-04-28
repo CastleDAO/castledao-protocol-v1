@@ -64,6 +64,11 @@ npx hardhat run scripts/competitions/00-deploy-competitions.ts --network arbitru
 npx hardhat run scripts/competitions/01-create-competition.ts --network arbitrumgoerli
 ```
 
+## Deploy simple staking
+
+```shell
+npx hardhat run scripts/staking/00-deploy-simple-staker.ts --network arbitrumgoerli
+```
 
 ## TODO List
 

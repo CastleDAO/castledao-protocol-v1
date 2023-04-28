@@ -25,8 +25,20 @@ contract SimplifiedStaker is ERC1155Holder, ERC721Holder {
         _stakeERC721ForUser(allowedCollection, _tokenId, msg.sender);
     }
 
+    function stakeMany(uint256[] calldata _tokenIds) external {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            _stakeERC721ForUser(allowedCollection, _tokenIds[i], msg.sender);
+        }
+    }
+
     function unstake(uint256 _tokenId) external {
         _unstakeERC721(allowedCollection, _tokenId);
+    }
+
+    function unstakeMany(uint256[] calldata _tokenIds) external {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            _unstakeERC721(allowedCollection, _tokenIds[i]);
+        }
     }
 
     function _stakeERC721ForUser(

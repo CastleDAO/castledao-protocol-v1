@@ -12,7 +12,7 @@ async function main() {
             : deployed_contracts.arbitrumgoerli.castles;
 
     // Deploy the SimpleStakers contract
-    const SimpleStakers = await ethers.getContractFactory("SimpleStakers");
+    const SimpleStakers = await ethers.getContractFactory("SimplifiedStaker");
     const simpleStakers = await SimpleStakers.deploy(castleContractAddress);
     await simpleStakers.deployed();
     console.log("SimpleStakers contract deployed to:", simpleStakers.address);
