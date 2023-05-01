@@ -43,8 +43,8 @@ async function main() {
     const [signer] = await ethers.getSigners();
 
     // Define the competition parameters
-    const name = "The Dude Cup";
-    const owner = '0x78388dB045D642046206c81153073deEaFd310a9'; // TODO Replace with the actual owner address
+    const name = "REALM - MAY";
+    const owner = '0xDC7C6F367E4680D3B8e4ceAB1e65cB7E361314A1'; // TODO Replace with the actual owner address
     const entryFeeAmount = ethers.utils.parseEther("1");
     const magicContractAddress = network.chainId === 42161 ? deployed_contracts.mainnet.magic : deployed_contracts.arbitrumgoerli.magic;
 
@@ -54,6 +54,7 @@ async function main() {
 
     const monthInfo = getMonthInfo();
     const endDate =  Math.floor(monthInfo.timestampEndMonth / 1000);
+    // const endDate = Math.floor((new Date().getTime() + 3600000) / 1000); 
 
     const optionsJson = "{}"; // Replace with the actual options JSON
 

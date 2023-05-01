@@ -11,17 +11,17 @@ const REWARDS = [
     {
         winner: "0x7a25af1bfe363cce64ba7b52b5170bbb5926d488",
         reward: "MAGIC",
-        amount: 25,
+        amount: 10,
     },
     {
         winner: "0xc033728e305f63558c87ac4deed63e0c3978f0e4",
         reward: "MAGIC",
-        amount: 35,
+        amount: 45,
     },
     {
         winner: "0xc033728e305f63558c87ac4deed63e0c3978f0e4",
         reward: "ELM",
-        amount: 15,
+        amount: 25,
     },
     {
         winner: "0x7cc353433ef9df7676fbb39da26fa0e278107409",
@@ -30,42 +30,32 @@ const REWARDS = [
     },
     {
         winner: "0x7cc353433ef9df7676fbb39da26fa0e278107409",
-        reward: "MAGIC",
-        amount: 10,
-    },
-    {
-        winner: "0x7cc353433ef9df7676fbb39da26fa0e278107409",
         reward: "ELM",
         amount: 10,
     },
-    {
-        winner: "0x20d7bfab33f4639b0f69086be85b3041cf5235ad",
-        reward: "MAGIC",
-        amount: 5,
-    },
-
-
-    {
-        winner: "0x877b37d3e5467b4aae7687dd3480a46c8d3e16be",
-        reward: "MAGIC",
-        amount: 5,
-    },
-
     {
         winner: "0x20d7bfab33f4639b0f69086be85b3041cf5235ad",
         reward: "MAGIC",
         amount: 15,
     },
     {
-        winner: "0x559862c9ea8433e881dca82b56ac88676c7b04ae",
-        reward: "ELM",
+        winner: "0xb34575a6bc46d07f2da8f35b119d191cf9921b5c",
+        reward: "MAGIC",
         amount: 5,
     },
     {
-        winner: "0x5e8bb171efb4ef1da79479c794d5b8ec550233f1",
+        winner: "0xb34575a6bc46d07f2da8f35b119d191cf9921b5c",
         reward: "ELM",
-        amount: 5,
+        amount: 15,
     },
+
+
+    {
+        winner: "0x559862c9ea8433e881dca82b56ac88676c7b04ae",
+        reward: "ELM",
+        amount: 10,
+    },
+
 ];
 
 const ERC20_ABI = [
