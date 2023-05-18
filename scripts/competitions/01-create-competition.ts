@@ -43,13 +43,13 @@ async function main() {
     const [signer] = await ethers.getSigners();
 
     // Define the competition parameters
-    const name = "REALM - MAY";
-    const owner = '0xDC7C6F367E4680D3B8e4ceAB1e65cB7E361314A1'; // TODO Replace with the actual owner address
-    const entryFeeAmount = ethers.utils.parseEther("1");
+    const name = "Beacon - June";
+    const owner = '0x846FF49d72F4e3CA7a3D318820C6C2debe23c68A'; // TODO Replace with the actual owner address
+    const entryFeeAmount = ethers.utils.parseEther("0");
     const magicContractAddress = network.chainId === 42161 ? deployed_contracts.mainnet.magic : deployed_contracts.arbitrumgoerli.magic;
 
     const entryFeeToken = magicContractAddress; // Replace with the actual token address
-    const percentageForOwner = 10;
+    const percentageForOwner = 0;
     const percentageForTreasury = 10;
 
     const monthInfo = getMonthInfo();

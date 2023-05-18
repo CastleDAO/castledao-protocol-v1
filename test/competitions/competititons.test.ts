@@ -221,7 +221,7 @@ describe("CompetitionFactory and Competition", function () {
         await expect(
             competition.connect(user).join()
         ).to.be.revertedWith("Already joined");
-        });
+    });
 
     it('Should allow the restricted address to set winners', async () => {
         const entryFeeAmount = parseEther("10");
@@ -299,6 +299,45 @@ describe("CompetitionFactory and Competition", function () {
         expect(await competition.connect(user).winners(0)).to.equal(await user.getAddress());
     });
         
+    it("should allow to enter a competition with a 0 fee", async () => {
+        const entryFeeAmount = parseEther("0");
+        const percentageForOwner = 0;
+        const percentageForTreasury = 10;
+        const endDate = Math.floor(Date.now() / 1000) + 3600 * 24 * 10; // 10 day from now
+        const optionsJson = "[]";
+
+        // Create a new competition
+        const createCompetitionTx = await competitionFactory.connect(owner).createCompetition(
+            "Test Competition",
+            await owner.getAddress(),
+            entryFeeAmount,
+            testERC20.address,
+            percentageForOwner,
+            percentageForTreasury,
+            endDate,
+            optionsJson
+        );
+    
+        const competitionResponse = await createCompetitionTx.wait();
+        const competitionId = competitionResponse.events?.[0].args?.[0];
+
+        const competitionAddress = await competitionFactory.competitions(competitionId);
+        const CompetitionItem = await ethers.getContractFactory("Competition");
+
+        const competition = new ethers.Contract(competitionAddress, CompetitionItem.interface, owner);
+
+
+        // Try to join the competition
+        // await testERC20.connect(user).approve(competition.address, parseEther("20"));
+
+        await competition.connect(user).join();
+
+        // Count the number of participants
+        const participantsCount = await competition.getParticipantsCount();
+        expect(participantsCount).to.equal(1);
+
+        
+    });
 
     // Add more test cases as needed
 });
