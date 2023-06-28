@@ -33,6 +33,7 @@ export const deployed_contracts = {
         manager: '0x8937fF68da18e97B58109b598a6f0EbbF82DA3E2',
         masterCastles: '0xfc7590e2d9226327FF9D517F2D3653C05b7f625E',
         generalsAmulet: '0x1DF62622F2FA840eD0708a52B67b89f48bAD806b',
+        competitions: '0x2a8847a86840E465040D6c77d2e63548786ff633',
 
         // Other
         magic: '0x539bde0d7dbd336b79148aa742883198bbf60342',
