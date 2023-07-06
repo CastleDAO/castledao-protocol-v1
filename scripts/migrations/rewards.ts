@@ -7,54 +7,46 @@ const TOKENS = {
 };
 
 const REWARDS = [
+    // beacon royale 150 magic top 3
+    {
+        winner: "0xd780a443211811cae12fdd0ceee6a59b3ab285ac",
+        reward: "MAGIC",
+        amount: 90,
+    },
+    {
+        winner: "0x488644615d30d320c7af1397fc1b89550ced0ac0",
+        reward: "MAGIC",
+        amount: 40,
+    },
+    {
+        winner: "0xc4d37bcd0835b12f46d35465bf46fa6fe0101c92",
+        reward: "MAGIC",
+        amount: 20,
+    },
+// classic & modenr
 
     {
-        winner: "0x7a25af1bfe363cce64ba7b52b5170bbb5926d488",
+        winner: "0xcd0eb48851856f64b7c3e0644c08c252876e6b05",
         reward: "MAGIC",
-        amount: 10,
+        amount: 60,
     },
     {
-        winner: "0xc033728e305f63558c87ac4deed63e0c3978f0e4",
-        reward: "MAGIC",
-        amount: 45,
-    },
-    {
-        winner: "0xc033728e305f63558c87ac4deed63e0c3978f0e4",
-        reward: "ELM",
-        amount: 25,
-    },
-    {
-        winner: "0x7cc353433ef9df7676fbb39da26fa0e278107409",
+        winner: "0xfde5dee1158f2e51dde568b5c7035bff9a54df42",
         reward: "MAGIC",
         amount: 20,
     },
     {
+        winner: "0xb34575a6bc46d07f2da8f35b119d191cf9921b5c",
+        reward: "MAGIC",
+        amount: 10,
+    },
+    {
         winner: "0x7cc353433ef9df7676fbb39da26fa0e278107409",
-        reward: "ELM",
+        reward: "MAGIC",
         amount: 10,
-    },
-    {
-        winner: "0x20d7bfab33f4639b0f69086be85b3041cf5235ad",
-        reward: "MAGIC",
-        amount: 15,
-    },
-    {
-        winner: "0xb34575a6bc46d07f2da8f35b119d191cf9921b5c",
-        reward: "MAGIC",
-        amount: 5,
-    },
-    {
-        winner: "0xb34575a6bc46d07f2da8f35b119d191cf9921b5c",
-        reward: "ELM",
-        amount: 15,
     },
 
 
-    {
-        winner: "0x559862c9ea8433e881dca82b56ac88676c7b04ae",
-        reward: "ELM",
-        amount: 10,
-    },
 
 ];
 

@@ -60,8 +60,8 @@ npx hardhat verify --network arbitrumgoerli DEPLOYED_CONTRACT_ADDRESS "Hello, Ha
 ## Deploy competitions
 
 ```shell
-npx hardhat run scripts/competitions/00-deploy-competitions.ts --network arbitrumgoerli
-npx hardhat run scripts/competitions/01-create-competition.ts --network arbitrumgoerli
+npx hardhat run scripts/competitions/02-deploy-competitions-v2.ts --network arbitrumgoerli
+npx hardhat run scripts/competitions/03-create-competitions-v2.ts --network arbitrumgoerli
 ```
 
 ## Deploy simple staking
@@ -69,7 +69,12 @@ npx hardhat run scripts/competitions/01-create-competition.ts --network arbitrum
 ```shell
 npx hardhat run scripts/staking/00-deploy-simple-staker.ts --network arbitrumgoerli
 ```
+## Distribute rewards
 
+```shell
+npx hardhat run scripts/migrations/set-winners-competition.ts --network arbitrummainnet
+npx hardhat run scripts/migrations/nft-rewards.ts --network arbitrummainnet
+```
 ## TODO List
 
 - [ ] Create a bound (bound manager) ERC155Upgradeable contract for the secret keys. Give one secret key to everyone who stakes for 100 days a castle. 

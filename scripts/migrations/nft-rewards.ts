@@ -5,7 +5,9 @@ import { ethers } from "hardhat";
 const REWARDS = {
     // "0xc033728e305f63558c87ac4deed63e0c3978f0e4": 3,
     // "0x7a25af1bfe363cce64ba7b52b5170bbb5926d488": 2,
-    "0x7A1955c4E362435A89e2F94366b9E9F92c66d7c1": 1,
+    "0xcd0eb48851856f64b7c3e0644c08c252876e6b05": 2,
+    "0xfde5dee1158f2e51dde568b5c7035bff9a54df42": 1,
+    "0x7cc353433ef9df7676fbb39da26fa0e278107409": 1,
     // "0x909f2514A4D09697aC1A3ea0C60b973746719702": 1,
     // "0x1152Bd448691705d7Aef5eCcA95092C0d8ce99e4": 1
   };

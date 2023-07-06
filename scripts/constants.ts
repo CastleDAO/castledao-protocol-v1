@@ -18,7 +18,7 @@ export const deployed_contracts = {
 
         // Other
         magic: '0x2D110bF8fd17b514CbdCa025a97AAeb5E463AF4E',
-
+        anima: '0xccd05a0fcfc1380e9da27862adb2198e58e0d66f',
         // Managers
         managers_addresses: {
             // Key address, value ROLE
@@ -34,7 +34,7 @@ export const deployed_contracts = {
         masterCastles: '0xfc7590e2d9226327FF9D517F2D3653C05b7f625E',
         generalsAmulet: '0x1DF62622F2FA840eD0708a52B67b89f48bAD806b',
         competitions: '0x2a8847a86840E465040D6c77d2e63548786ff633',
-
+        anima: '0xccd05a0fcfc1380e9da27862adb2198e58e0d66f',
         // Other
         magic: '0x539bde0d7dbd336b79148aa742883198bbf60342',
 
