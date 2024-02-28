@@ -5,8 +5,8 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./ManagerModifierUpgradeable.sol";
-import "./nfts/items/interfaces/ICastleVerseItems.sol";
+import "../ManagerModifierUpgradeable.sol";
+import "../nfts/items/interfaces/ICastleVerseItems.sol";
 
 contract Crafting is
     PausableUpgradeable,

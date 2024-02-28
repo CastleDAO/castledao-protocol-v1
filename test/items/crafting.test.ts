@@ -50,9 +50,7 @@ describe("CastleVerseCrafting", function () {
         const CastleVerseItems = await ethers.getContractFactory("CastleVerseItems");
         castleVerseItems = await upgrades.deployProxy(CastleVerseItems, [
             manager.address,
-            metadataContract.address,
-            magicToken.address,
-            rubyToken.address
+            metadataContract.address
         ]);
 
         await castleVerseItems.deployed();
@@ -69,14 +67,6 @@ describe("CastleVerseCrafting", function () {
 
         await castleVerseCrafting.deployed();
 
-
-        // Add some items to the items contract
-        await castleVerseItems.addItem(1, 100, 1000, true, false);
-        await castleVerseItems.addItem(2, 100, 1000, true, false);
-
-        // Restricted items
-        await castleVerseItems.addItem(3, 100, 1000, true, true);
-        await castleVerseItems.addItem(4, 100, 1000, true, true);
 
         // Add the minter role to the crafitng contract
         await manager.addManager(await castleVerseCrafting.address, 1);
