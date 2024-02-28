@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../ManagerModifierUpgradeable.sol";
 import "../nfts/items/interfaces/ICastleVerseItems.sol";
-
+import "../bank/interfaces/IBank.sol";
 contract Blacksmith is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -15,6 +15,7 @@ contract Blacksmith is
 {
     ICastleVerseItems public itemsContract;
     IERC20Upgradeable public rubyToken;
+    IBank public bank;
 
     mapping(uint256 => Item) public items;
 
@@ -30,13 +31,15 @@ contract Blacksmith is
     function initialize(
         address _manager,
         address _itemsContract,
-        address _rubyToken
+        address _rubyToken,
+        address _bank
     ) public initializer {
         __Pausable_init();
         __ReentrancyGuard_init();
         initializeManagerModifier(_manager);
         itemsContract = ICastleVerseItems(_itemsContract);
         rubyToken = IERC20Upgradeable(_rubyToken);
+        bank = IBank(_bank);
     }
 
       function addItem(
@@ -77,7 +80,7 @@ contract Blacksmith is
         bytes[] memory data,
         uint256 totalPrice
     ) internal {
-        rubyToken.transferFrom(msg.sender, address(this), totalPrice);
+        rubyToken.transferFrom(msg.sender, address(bank), totalPrice);
 
         for (uint256 i = 0; i < itemIds.length; i++) {
             itemsContract.managerMint(msg.sender, itemIds[i], amounts[i], data[i]);
@@ -128,10 +131,6 @@ contract Blacksmith is
         uint256 amount
     ) external onlyManager {
         IERC20Upgradeable(token).transfer(msg.sender, amount);
-    }
-
-    function withdrawRuby(uint256 amount) external onlyManager {
-        rubyToken.transfer(msg.sender, amount);
     }
 
     function withdrawETH(uint256 amount) external onlyManager {

@@ -88,6 +88,17 @@ npx hardhat run scripts/migrations/nft-rewards.ts --network arbitrummainnet
   It has the roles of minter
 - Crafting: Contract that allows to define recipes and to craft items. It also calls the mint function on the ERC1155 of items.
 
+## Bank
+
+- Bank receives the tokens from Blacksmith
+- Bank receives the tokens from mints
+- Bank receives the tokens from crafting
+
+What else a bank can do?
+
+- Maybe: If you deposit ruby you get some %APY
+- Maybe: you can get a loan
+
 ## TODO List
 
 - [ ] Create a bound (bound manager) ERC155Upgradeable contract for the secret keys. Give one secret key to everyone who stakes for 100 days a castle.

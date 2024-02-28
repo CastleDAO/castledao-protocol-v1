@@ -8,6 +8,7 @@ import { ethers, upgrades } from "hardhat";
 let castleVerseItems: Contract;
 let manager: Contract;
 let metadataContract: Contract;
+let bank: Contract;
 let magicToken: Contract;
 let rubyToken: Contract;
 let blacksmith: Contract;
@@ -38,6 +39,7 @@ describe("Blacksmith", function () {
         await manager.addManager(await owner.getAddress(), 3);
         await manager.addManager(await minterUser.getAddress(), 1);
 
+
         // Deploy the metadata contract
         const NFTMetadata = await ethers.getContractFactory("ItemsMetadataV1");
         metadataContract = await NFTMetadata.deploy("https://example.com/metadata/");
@@ -49,6 +51,11 @@ describe("Blacksmith", function () {
 
         rubyToken = await ERC20.deploy();
         await rubyToken.deployed();
+
+        // Deploy the bank
+        const Bank = await ethers.getContractFactory("Bank");
+        bank = await upgrades.deployProxy(Bank, [manager.address, rubyToken.address]);
+
 
         // Deploy the CastleVerseItems contract
         const CastleVerseItems = await ethers.getContractFactory("CastleVerseItems");
@@ -66,6 +73,7 @@ describe("Blacksmith", function () {
             manager.address,
             castleVerseItems.address,
             rubyToken.address,
+            bank.address
         ]);
 
         await blacksmith.deployed();
@@ -118,7 +126,7 @@ describe("Blacksmith", function () {
 
         await blacksmith.connect(user1).purchaseItems([1], [1], ["0x"]);
         expect(await castleVerseItems.balanceOf(user1address, 1)).to.equal(1);
-        expect(await rubyToken.balanceOf(blacksmith.address)).to.equal(100);
+        expect(await rubyToken.balanceOf(bank.address)).to.equal(100);
     });
 
     it("Should purchase an item with magic", async () => {
