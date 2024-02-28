@@ -46,7 +46,7 @@ describe("Blacksmith", function () {
         // Deploy the magic and ruby token contracts
         const ERC20 = await ethers.getContractFactory("TestERC20");
         magicToken = await ERC20.deploy();
-        await magicToken.deployed();
+
         rubyToken = await ERC20.deploy();
         await rubyToken.deployed();
 
@@ -65,7 +65,6 @@ describe("Blacksmith", function () {
         blacksmith = await upgrades.deployProxy(Blacksmith, [
             manager.address,
             castleVerseItems.address,
-            magicToken.address,
             rubyToken.address,
         ]);
 
@@ -79,28 +78,24 @@ describe("Blacksmith", function () {
     });
 
     it("Should allow the manager to add an item", async () => {
-        await blacksmith.addItem(1, 100, 1000, true, 10);
+        await blacksmith.addItem(1, 100, 10);
         const item = await blacksmith.items(1);
         expect(item.priceRuby).to.equal(100);
-        expect(item.priceMagic).to.equal(1000);
-        expect(item.isMagicAllowed).to.be.true;
         expect(item.maxSupply).to.equal(10);
         expect(item.paused).to.be.false;
     });
 
     it("Should allow the manager to modify an item", async () => {
-        await blacksmith.addItem(1, 100, 1000, true, 10);
-        await blacksmith.modifyItem(1, 200, 2000, false, 5);
+        await blacksmith.addItem(1, 100, 10);
+        await blacksmith.modifyItem(1, 200, 5);
         const item = await blacksmith.items(1);
         expect(item.priceRuby).to.equal(200);
-        expect(item.priceMagic).to.equal(2000);
-        expect(item.isMagicAllowed).to.be.false;
         expect(item.maxSupply).to.equal(5);
     });
 
     it("Should mint a free item", async () => {
-        await blacksmith.addItem(1, 0, 0, true, 1);
-        await blacksmith.connect(user1).purchaseItem(1, 1, true, "0x");
+        await blacksmith.addItem(1, 0, 1);
+        await blacksmith.connect(user1).purchaseItems([1], [1], ["0x"]);
         expect(await castleVerseItems.balanceOf(user1address, 1)).to.equal(1);
 
         // Increases the supply
@@ -108,53 +103,69 @@ describe("Blacksmith", function () {
     });
 
     it("Should reject when the max supply is reached", async () => {
-        await blacksmith.addItem(1, 0, 0, true, 1);
-        await blacksmith.connect(user1).purchaseItem(1, 1, true, "0x");
+        await blacksmith.addItem(1, 0, 1);
+        await blacksmith.connect(user1).purchaseItems([1], [1], ["0x"]);
         await expect(
-            blacksmith.connect(user1).purchaseItem(1, 1, true, "0x")
+            blacksmith.connect(user1).purchaseItems([1], [1], ["0x"])
         ).to.be.revertedWith("Max supply reached");
     });
 
     it("Should purchase an item with ruby", async () => {
 
-        await blacksmith.addItem(1, 100, 1000, true, 1);
+        await blacksmith.addItem(1, 100, 1);
         await rubyToken.mint(100, user1address);
         await rubyToken.connect(user1).approve(blacksmith.address, 100);
 
-        await blacksmith.connect(user1).purchaseItem(1, 1, false, "0x");
+        await blacksmith.connect(user1).purchaseItems([1], [1], ["0x"]);
         expect(await castleVerseItems.balanceOf(user1address, 1)).to.equal(1);
         expect(await rubyToken.balanceOf(blacksmith.address)).to.equal(100);
     });
 
     it("Should purchase an item with magic", async () => {
-        await blacksmith.addItem(1, 100, 1000, true, 1);
+        await blacksmith.addItem(1, 100, 1);
         await magicToken.mint(1000, user1address);
         await magicToken.connect(user1).approve(blacksmith.address, 1000);
 
-        await blacksmith.connect(user1).purchaseItem(1, 1, true, "0x");
-        expect(await castleVerseItems.balanceOf(user1address, 1)).to.equal(1);
-        expect(await magicToken.balanceOf(blacksmith.address)).to.equal(1000);
-    });
-
-    it("Should not allow purchase with magic if not allowed", async () => {
-        await blacksmith.addItem(1, 100, 1000, false, 1);
-        await magicToken.mint(1000, user1address);
-        await magicToken.connect(user1).approve(blacksmith.address, 1000);
-
+        // Expect purchase reverted
         await expect(
-            blacksmith.connect(user1).purchaseItem(1, 1, true, "0x")
-        ).to.be.revertedWith("MAGIC payment is not allowed for this item");
+            blacksmith.connect(user1).purchaseItems([1], [1], ["0x"])
+        ).to.be.revertedWith("ERC20: insufficient allowance");
+
+        expect(await castleVerseItems.balanceOf(user1address, 1)).to.equal(0);
+
     });
+
 
     it("Should reject the mint if the item is paused at the items contract level", async () => {
         await castleVerseItems.pauseItem(1);
-        await blacksmith.addItem(1, 0, 0, true, 1);
+        await blacksmith.addItem(1, 0, 1);
         await expect(
-            blacksmith.connect(user1).purchaseItem(1, 1, true, "0x")
+            blacksmith.connect(user1).purchaseItems([1], [1], ["0x"])
         ).to.be.revertedWith("Item is paused");
-
     });
 
+    it("Should allow to mint many items if they dont have max supply", async () => {
+        await blacksmith.addItem(1, 0, 0);
+        await blacksmith.connect(user1).purchaseItems([1], [1], ["0x"]);
+        await blacksmith.connect(user1).purchaseItems([1], [1], ["0x"]);
+        await blacksmith.connect(user1).purchaseItems([1], [1], ["0x"]);
+        expect(await castleVerseItems.balanceOf(user1address, 1)).to.equal(3);
+    });
+
+    it("Should allow to purchase 3 of the same item at once", async () => {
+        await blacksmith.addItem(1, 0, 0);
+        await blacksmith.connect(user1).purchaseItems([1], [3], ["0x"]);
+        expect(await castleVerseItems.balanceOf(user1address, 1)).to.equal(3);
+    });
+
+
+    it("Should allow to mint a batch of different items", async () => {
+        await blacksmith.addItem(1, 0, 0);
+        await blacksmith.addItem(2, 0, 0);
+        await blacksmith.connect(user1).purchaseItems([1, 2], [1, 1], ["0x", "0x"]);
+        expect(await castleVerseItems.balanceOf(user1address, 1)).to.equal(1);
+        expect(await castleVerseItems.balanceOf(user1address, 2)).to.equal(1);
+    });
 
 
 });

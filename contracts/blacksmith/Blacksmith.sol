@@ -14,7 +14,6 @@ contract Blacksmith is
     ManagerModifierUpgradeable
 {
     ICastleVerseItems public itemsContract;
-    IERC20Upgradeable public magicToken;
     IERC20Upgradeable public rubyToken;
 
     mapping(uint256 => Item) public items;
@@ -24,9 +23,6 @@ contract Blacksmith is
 
     struct Item {
         uint256 priceRuby;
-        uint256 priceMagic;
-        bool isMagicAllowed; // true if MAGIC payment is allowed
-        bool isFree;
         bool paused; // true if item is paused
         uint256 maxSupply; // 0 if no max supply
     }
@@ -34,29 +30,24 @@ contract Blacksmith is
     function initialize(
         address _manager,
         address _itemsContract,
-        address _magicToken,
         address _rubyToken
     ) public initializer {
         __Pausable_init();
         __ReentrancyGuard_init();
         initializeManagerModifier(_manager);
-
         itemsContract = ICastleVerseItems(_itemsContract);
-        magicToken = IERC20Upgradeable(_magicToken);
         rubyToken = IERC20Upgradeable(_rubyToken);
     }
 
       function addItem(
         uint256 itemId,
         uint256 priceRuby,
-        uint256 priceMagic,
-        bool isMagicAllowed,
         uint256 maxSupply
     )
         external
         onlyManager
     {
-        items[itemId] = Item(priceRuby, priceMagic, isMagicAllowed, (priceRuby == 0) && (priceMagic == 0), false, maxSupply);
+        items[itemId] = Item(priceRuby, false, maxSupply);
     }
 
     function pauseItem(uint256 itemId) external onlyManager {
@@ -70,46 +61,58 @@ contract Blacksmith is
     function modifyItem(
         uint256 itemId,
         uint256 newPriceRuby,
-        uint256 newPriceMagic,
-        bool newIsMagicAllowed,
         uint256 newMaxSupply
     )
         external
         onlyManager
     {
         items[itemId].priceRuby = newPriceRuby;
-        items[itemId].priceMagic = newPriceMagic;
-        items[itemId].isMagicAllowed = newIsMagicAllowed;
-        items[itemId].isFree = (newPriceRuby == 0) && (newPriceMagic == 0);
         items[itemId].maxSupply = newMaxSupply;
     }
 
-    function purchaseItem(uint256 itemId, uint256 amount, bool useMagic, bytes memory data) external {
-        Item memory item = items[itemId];
+    // Internal purchase function
+    function _purchaseItems(
+        uint256[] memory itemIds,
+        uint256[] memory amounts,
+        bytes[] memory data,
+        uint256 totalPrice
+    ) internal {
+        rubyToken.transferFrom(msg.sender, address(this), totalPrice);
 
-        // Check the max supply 
-        if (item.maxSupply > 0) {
-            require(totalSupply[itemId] + amount <= item.maxSupply, "Max supply reached");
+        for (uint256 i = 0; i < itemIds.length; i++) {
+            itemsContract.managerMint(msg.sender, itemIds[i], amounts[i], data[i]);
+            totalSupply[itemIds[i]] += amounts[i];
         }
-        
-        if (!item.isFree) {
+    }
 
-            require(item.isMagicAllowed || !useMagic, "MAGIC payment is not allowed for this item");
+    function purchaseItems(
+        uint256[] memory itemIds,
+        uint256[] memory amounts,
+        bytes[] memory data
+    ) external {
+        require(
+            itemIds.length == amounts.length && itemIds.length == data.length,
+            "Input length mismatch"
+        );
 
-            uint256 totalPrice = useMagic ? item.priceMagic * amount : item.priceRuby * amount;
+        uint256 totalPrice;
 
-            if (useMagic) {
-                magicToken.transferFrom(msg.sender, address(this), totalPrice);
-            } else {
-                rubyToken.transferFrom(msg.sender, address(this), totalPrice);
+        for (uint256 i = 0; i < itemIds.length; i++) {
+            Item memory item = items[itemIds[i]];
+
+            // Check the max supply 
+            if (item.maxSupply > 0) {
+                require(totalSupply[itemIds[i]] + amounts[i] <= item.maxSupply, "Max supply reached");
+            }
+
+            if (item.priceRuby > 0) {
+                totalPrice += item.priceRuby * amounts[i];
             }
         }
 
-        itemsContract.managerMint(msg.sender, itemId, amount, data);
+        _purchaseItems(itemIds, amounts, data, totalPrice );
 
-        totalSupply[itemId] += amount;
-
-    }
+    }    
 
   
     function pause() external onlyManager {
@@ -125,10 +128,6 @@ contract Blacksmith is
         uint256 amount
     ) external onlyManager {
         IERC20Upgradeable(token).transfer(msg.sender, amount);
-    }
-
-    function withdrawMagic(uint256 amount) external onlyManager {
-        magicToken.transfer(msg.sender, amount);
     }
 
     function withdrawRuby(uint256 amount) external onlyManager {
