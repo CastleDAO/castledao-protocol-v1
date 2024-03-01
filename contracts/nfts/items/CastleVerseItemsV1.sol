@@ -8,10 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 contract CastleVerseItems is ERC1155Upgradeable, ManagerModifierUpgradeable {
     INFTMetadata private _metadataContract;
-    IERC20Upgradeable public magicToken;
     IERC20Upgradeable public rubyToken;
-    mapping(uint256 => bytes) public itemCustomizationData;
-
 
     // Holds the list of paused items
     mapping(uint256 => bool) public pausedItems;

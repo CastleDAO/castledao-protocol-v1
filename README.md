@@ -99,6 +99,8 @@ What else a bank can do?
 - Maybe: If you deposit ruby you get some %APY
 - Maybe: you can get a loan
 
+## Smol Brawlers
+
 ## TODO List
 
 - [ ] Create a bound (bound manager) ERC155Upgradeable contract for the secret keys. Give one secret key to everyone who stakes for 100 days a castle.
