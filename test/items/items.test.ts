@@ -79,6 +79,18 @@ describe("Items", function () {
         expect(await castleVerseItems.balanceOf(user1address, 2)).to.equal(0);
     });
 
+    it("Should not allow other users to burn items from other users", async () => {
+        await castleVerseItems.managerMint(user1address, 1, 1, "0x");
+        await expect(castleVerseItems.connect(user2).burn(user1address, 1, 1)).to.be.revertedWith("ERC1155: caller is not owner nor approved");
+
+        // User1 approves user2
+        await castleVerseItems.connect(user1).setApprovalForAll(await user2.getAddress(), true);
+
+        // User2 tries to burn and it works
+        await castleVerseItems.connect(user2).burn(user1address, 1, 1);
+        expect(await castleVerseItems.balanceOf(user1address, 1)).to.equal(0);
+    });
+
     it('should return the right token uri', async () => {
         expect(await castleVerseItems.uri(1)).to.equal("https://example.com/metadata/1.json");
     });
