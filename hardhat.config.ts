@@ -39,11 +39,15 @@ const config: HardhatUserConfig = {
     },
     arbitrumgoerli: {
       url: `https://arb-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      accounts: [ process.env.WALLET_PRIVATE_KEY_TESTNET as string],
+      accounts: [process.env.WALLET_PRIVATE_KEY_TESTNET as string],
     },
     arbitrummainnet: {
       url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      accounts: [ process.env.WALLET_PRIVATE_KEY_MAINNET as string],
+      accounts: [process.env.WALLET_PRIVATE_KEY_MAINNET as string],
+    },
+    mainnet: {
+      url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+      accounts: [process.env.WALLET_PRIVATE_KEY_MAINNET as string],
     },
   },
   gasReporter: {

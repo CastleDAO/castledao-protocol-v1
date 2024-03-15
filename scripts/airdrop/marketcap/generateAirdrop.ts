@@ -73,6 +73,11 @@ const castledaoCollections = [{
     address: "0x1aaec0fa487a979a3f6b46dccf0ac2648167a61e"
 }]
 
+const layer1Collections = [{
+    collection_name: "milady",
+    address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
+}]
+
 async function getOwnersCollection(collectionAddress: string, collectionName: string, start: number, end: number, acc: any) {
     try {
         const TestERC721 = await ethers.getContractFactory("TestERC721");
@@ -103,8 +108,8 @@ async function main() {
     const currentNetwork = await ethers.provider.getNetwork();
     console.log(`Current network: ${currentNetwork.name}`)
 
-    for (var i = 0; i < externalCollections2.length; i++) {
-        const collection = externalCollections2[i];
+    for (var i = 0; i < layer1Collections.length; i++) {
+        const collection = layer1Collections[i];
         const collectionName = collection.collection_name;
         const collectionAddress = collection.address;
         console.log(`Getting owners for ${collectionName}...`)
