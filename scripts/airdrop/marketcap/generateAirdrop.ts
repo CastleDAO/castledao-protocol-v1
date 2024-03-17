@@ -73,6 +73,11 @@ const castledaoCollections = [{
     address: "0x1aaec0fa487a979a3f6b46dccf0ac2648167a61e"
 }]
 
+const externalCollections3 = [{
+    collection_name: "donkeys",
+    address: "0x5e84c1a06e6ad1a8ed66bc48dbe5eb06bf2fe4aa"
+}]
+
 const layer1Collections = [{
     collection_name: "milady",
     address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
@@ -85,8 +90,14 @@ async function getOwnersCollection(collectionAddress: string, collectionName: st
         const contract = new ethers.Contract(collectionAddress, TestERC721.interface, ethers.provider);
         for (var i = start; i < end; i++) {
             try {
-                const owner = await contract.ownerOf(i);
+                let owner = await contract.ownerOf(i);
+
                 console.log(`Token ${i} owner: ${owner}`)
+                if (owner.toLowerCase() == "0x27f970f2164195cf898aa03619e2783ffade8513") {
+                    console.log(`Token ${i} is staked donkey`)
+                    owner = await getOwnerForStakedDonkey(i)
+                    console.log(`Token ${i} owner: ${owner}`)
+                }
                 if (acc[owner]) {
                     acc[owner].push(i)
                 } else {
@@ -108,8 +119,8 @@ async function main() {
     const currentNetwork = await ethers.provider.getNetwork();
     console.log(`Current network: ${currentNetwork.name}`)
 
-    for (var i = 0; i < layer1Collections.length; i++) {
-        const collection = layer1Collections[i];
+    for (var i = 0; i < externalCollections3.length; i++) {
+        const collection = externalCollections3[i];
         const collectionName = collection.collection_name;
         const collectionAddress = collection.address;
         console.log(`Getting owners for ${collectionName}...`)
@@ -137,6 +148,18 @@ async function main() {
     }
 
 
+}
+
+async function getOwnerForStakedDonkey(tokenId: number) {
+    const stakingContractAddress = "0x27f970F2164195Cf898AA03619e2783ffAdE8513"
+
+    const StakingContract = await ethers.getContractFactory("Donkey");
+
+    const contract = new ethers.Contract(stakingContractAddress, StakingContract.interface, ethers.provider);
+
+    const owner = await contract.ownerForStakedDonkey(tokenId);
+
+    return owner
 }
 
 function aggregateWallets() {
